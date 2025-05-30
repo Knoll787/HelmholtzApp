@@ -174,10 +174,10 @@ class MovementTab(QWidget):
 
         # SVG Handleing 
         svg_widget = QSvgWidget()
-        svg_widget.load("images/equation.svg")  # Replace with your SVG file path
-        renderer = QSvgRenderer("images/equation.svg")
+        svg_widget.load("resources/equations/rolling.svg")  # Replace with your SVG file path
+        renderer = QSvgRenderer("resources/equations/rolling.svg")
         orig_size = renderer.defaultSize()
-        factor = 0.8;
+        factor = 0.8
         scaled_width = int(orig_size.width() * factor)
         scaled_height = int(orig_size.height() * factor)
         svg_widget.setFixedSize(scaled_width, scaled_height)
@@ -215,8 +215,59 @@ class MovementTab(QWidget):
         
 
     def load_tumbling_ui(self):
-        label = QLabel("Rolling mode is under development.")
-        self.dynamic_layout.addWidget(label)
+        field_layout = QGridLayout()
+
+        label = QLabel("Field Characteristic")
+        field_layout.addWidget(label, 0, 0)
+
+        b0_label = QLabel("B0 [mT]:")
+        omega_label = QLabel("ω [rad/s]:")
+        self.b0_spin = QDoubleSpinBox()
+        self.omega_spin = QDoubleSpinBox()
+        field_layout.addWidget(b0_label, 3, 0)
+        field_layout.addWidget(self.b0_spin, 3, 1)
+        field_layout.addWidget(omega_label, 5, 0)
+        field_layout.addWidget(self.omega_spin, 5, 1)
+
+        # SVG Handleing 
+        svg_widget = QSvgWidget()
+        svg_widget.load("resources/equations/tumbling.svg")  # Replace with your SVG file path
+        renderer = QSvgRenderer("resources/equations/tumbling.svg")
+        orig_size = renderer.defaultSize()
+        factor = 0.8
+        scaled_width = int(orig_size.width() * factor)
+        scaled_height = int(orig_size.height() * factor)
+        svg_widget.setFixedSize(scaled_width, scaled_height)
+        field_layout.addWidget(svg_widget, 0, 1)
+
+        self.dynamic_layout.addLayout(field_layout)
+
+        # Spacer
+        self.dynamic_layout.addStretch()
+        
+        # Coil Parameters 
+        param_layout = QGridLayout()
+        header_current = QLabel("Current [A]")
+        header_PWM = QLabel("PWM Duty Cycle [%]")
+        
+        x, y = 5, 68
+        I = []
+        for i in range(1, 7):
+            I.append(QLabel("I" + str(i) +":\t" + str(x)))
+
+        PWM = []
+        for i in range(1, 7):
+            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
+
+        param_layout.addWidget(header_current, 0, 0)
+        param_layout.addWidget(header_PWM, 0, 1)
+
+        for i in range(1,7):
+            param_layout.addWidget(I[i-1], i, 0)
+
+        for i in range(1,7):
+            param_layout.addWidget(PWM[i-1], i, 1)
+        self.dynamic_layout.addLayout(param_layout)
 
     def load_path_following_ui(self):
         label = QLabel("Path Following mode is under development.")
