@@ -137,36 +137,23 @@ class MovementTab(QWidget):
         header_PWM = QLabel("PWM Duty Cycle [%]")
         
         x, y = 5, 68
-        I1 = QLabel("I1:\t" + str(x))
-        I2 = QLabel("I2:\t" + str(x))
-        I3 = QLabel("I3:\t" + str(x))
-        I4 = QLabel("I4:\t" + str(x))
-        I5 = QLabel("I5:\t" + str(x))
-        I6 = QLabel("I6:\t" + str(x))
+        I = []
+        for i in range(1, 7):
+            I.append(QLabel("I" + str(i) +":\t" + str(x)))
 
-        PWM1 = QLabel("PWM1:\t" + str(y))
-        PWM2 = QLabel("PWM2:\t" + str(y))
-        PWM3 = QLabel("PWM3:\t" + str(y))
-        PWM4 = QLabel("PWM4:\t" + str(y))
-        PWM5 = QLabel("PWM5:\t" + str(y))
-        PWM6 = QLabel("PWM6:\t" + str(y))
+        PWM = []
+        for i in range(1, 7):
+            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
 
         field_layout.addWidget(header_current, 0, 0)
         field_layout.addWidget(header_PWM, 0, 1)
 
-        field_layout.addWidget(I1, 1, 0)
-        field_layout.addWidget(I2, 2, 0)
-        field_layout.addWidget(I3, 3, 0)
-        field_layout.addWidget(I4, 4, 0)
-        field_layout.addWidget(I5, 5, 0)
-        field_layout.addWidget(I6, 6, 0)
+        for i in range(1,7):
+            field_layout.addWidget(I[i-1], i, 0)
 
-        field_layout.addWidget(PWM1, 1, 1)
-        field_layout.addWidget(PWM2, 2, 1)
-        field_layout.addWidget(PWM3, 3, 1)
-        field_layout.addWidget(PWM4, 4, 1)
-        field_layout.addWidget(PWM5, 5, 1)
-        field_layout.addWidget(PWM6, 6, 1)
+        for i in range(1,7):
+            field_layout.addWidget(PWM[i-1], i, 1)
+            
         self.dynamic_layout.addLayout(field_layout)
 
     def load_rolling_ui(self):
