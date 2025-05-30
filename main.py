@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel,
     QPushButton, QDoubleSpinBox, QGridLayout, QHBoxLayout, QTabWidget, QComboBox, QTableWidget, QTableWidgetItem
 )
+from PyQt5.QtSvg import QSvgWidget
 
 
 class CameraTab(QWidget):
@@ -132,7 +133,7 @@ class MovementTab(QWidget):
 
 
         # Coil Parameters 
-        field_layout = QGridLayout()
+        param_layout = QGridLayout()
         header_current = QLabel("Current [A]")
         header_PWM = QLabel("PWM Duty Cycle [%]")
         
@@ -145,24 +146,57 @@ class MovementTab(QWidget):
         for i in range(1, 7):
             PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
 
-        field_layout.addWidget(header_current, 0, 0)
-        field_layout.addWidget(header_PWM, 0, 1)
+        param_layout.addWidget(header_current, 0, 0)
+        param_layout.addWidget(header_PWM, 0, 1)
 
         for i in range(1,7):
-            field_layout.addWidget(I[i-1], i, 0)
+            param_layout.addWidget(I[i-1], i, 0)
 
         for i in range(1,7):
-            field_layout.addWidget(PWM[i-1], i, 1)
+            param_layout.addWidget(PWM[i-1], i, 1)
             
-        self.dynamic_layout.addLayout(field_layout)
+        self.dynamic_layout.addLayout(param_layout)
 
     def load_rolling_ui(self):
-        label = QLabel("Rolling mode is under development.")
+        label = QLabel("Field Characteristics")
         self.dynamic_layout.addWidget(label)
+        
+        # Coil Parameters 
+        param_layout = QGridLayout()
+        header_current = QLabel("Current [A]")
+        header_PWM = QLabel("PWM Duty Cycle [%]")
+        
+        x, y = 5, 68
+        I = []
+        for i in range(1, 7):
+            I.append(QLabel("I" + str(i) +":\t" + str(x)))
+
+        PWM = []
+        for i in range(1, 7):
+            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
+
+        param_layout.addWidget(header_current, 0, 0)
+        param_layout.addWidget(header_PWM, 0, 1)
+
+        for i in range(1,7):
+            param_layout.addWidget(I[i-1], i, 0)
+
+        for i in range(1,7):
+            param_layout.addWidget(PWM[i-1], i, 1)
+        self.dynamic_layout.addLayout(param_layout)
+
+        
 
     def load_tumbling_ui(self):
-        label = QLabel("Tumbling mode is under development.")
-        self.dynamic_layout.addWidget(label)
+
+        # Create SVG widget
+        svg_widget = QSvgWidget()
+        #svg_widget.setFixedSize(300, 300)  # Adjust size as needed
+
+        # Load SVG file
+        svg_widget.load("images/equation.svg")  # Replace with your SVG file path
+
+        self.dynamic_layout.addWidget(svg_widget)
 
     def load_path_following_ui(self):
         label = QLabel("Path Following mode is under development.")
