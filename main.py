@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel,
     QPushButton, QDoubleSpinBox, QGridLayout, QHBoxLayout, QTabWidget, QComboBox, QTableWidget, QTableWidgetItem
 )
-from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtSvg import (QSvgWidget, QSvgRenderer) 
 
 
 class CameraTab(QWidget):
@@ -158,8 +158,35 @@ class MovementTab(QWidget):
         self.dynamic_layout.addLayout(param_layout)
 
     def load_rolling_ui(self):
-        label = QLabel("Field Characteristics")
-        self.dynamic_layout.addWidget(label)
+        field_layout = QGridLayout()
+
+        label = QLabel("Field Characteristic")
+        field_layout.addWidget(label, 0, 0)
+
+        b0_label = QLabel("B0 [mT]:")
+        omega_label = QLabel("ω [rad/s]:")
+        self.b0_spin = QDoubleSpinBox()
+        self.omega_spin = QDoubleSpinBox()
+        field_layout.addWidget(b0_label, 3, 0)
+        field_layout.addWidget(self.b0_spin, 3, 1)
+        field_layout.addWidget(omega_label, 5, 0)
+        field_layout.addWidget(self.omega_spin, 5, 1)
+
+        # SVG Handleing 
+        svg_widget = QSvgWidget()
+        svg_widget.load("images/equation.svg")  # Replace with your SVG file path
+        renderer = QSvgRenderer("images/equation.svg")
+        orig_size = renderer.defaultSize()
+        factor = 0.8;
+        scaled_width = int(orig_size.width() * factor)
+        scaled_height = int(orig_size.height() * factor)
+        svg_widget.setFixedSize(scaled_width, scaled_height)
+        field_layout.addWidget(svg_widget, 0, 1)
+
+        self.dynamic_layout.addLayout(field_layout)
+
+        # Spacer
+        self.dynamic_layout.addStretch()
         
         # Coil Parameters 
         param_layout = QGridLayout()
@@ -188,15 +215,8 @@ class MovementTab(QWidget):
         
 
     def load_tumbling_ui(self):
-
-        # Create SVG widget
-        svg_widget = QSvgWidget()
-        #svg_widget.setFixedSize(300, 300)  # Adjust size as needed
-
-        # Load SVG file
-        svg_widget.load("images/equation.svg")  # Replace with your SVG file path
-
-        self.dynamic_layout.addWidget(svg_widget)
+        label = QLabel("Rolling mode is under development.")
+        self.dynamic_layout.addWidget(label)
 
     def load_path_following_ui(self):
         label = QLabel("Path Following mode is under development.")
