@@ -81,6 +81,8 @@ class MovementTab(QWidget):
         # Action Buttons
         btn_submit = QPushButton("Sumbit")
         btn_reset= QPushButton("Reset")
+        btn_submit.clicked.connect(self.btn_submit_action)
+        btn_reset.clicked.connect(self.btn_reset_action)
         bottom_layout.addWidget(btn_submit)
         bottom_layout.addWidget(btn_reset)
 
@@ -105,11 +107,23 @@ class MovementTab(QWidget):
             elif item.layout():
                 self.clear_layout(item.layout())
 
-    def btn_sumbit_action(self):
-        return 
+    def btn_submit_action(self):
+        mode = self.combo_box.currentText()
+        if mode == "Field Alignment":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Rolling":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Tumbling":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Path Following":
+            print(mode)
+            # Do Stuff here
 
     def btn_reset_action(self):
-        return 
+        print("Goodbye World")
 
     def on_mode_changed(self, mode):
         self.clear_layout(self.dynamic_layout)
