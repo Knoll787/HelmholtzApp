@@ -8,12 +8,26 @@ class Coils:
         # Assign MockPWMPin to all PWM pins
         factory = MockFactory()
         Device.pin_factory = factory
+        
+
+
+        # PWM_PINS[0] -> Coil 1 - Z Coil
+        # PWM_PINS[1] -> Coil 2 - Z Coil
+        # PWM_PINS[2] -> Coil 3 - Y Coil
+        # PWM_PINS[3] -> Coil 4 - Y Coil
+        # PWM_PINS[4] -> Coil 5 - X Coil
+        # PWM_PINS[5] -> Coil 6 - X Coil
         self.PWM_PINS = [12, 20, 5, 13, 17, 27]
         for pin in self.PWM_PINS:
             factory.pin(pin, pin_class=MockPWMPin)
 
 
-        #self.PIN_PWM = [12, 20, 5, 13, 17, 27]
+        # PIN_DIR[0] -> Coil 1 - Z Coil
+        # PIN_DIR[1] -> Coil 2 - Z Coil
+        # PIN_DIR[2] -> Coil 3 - Y Coil
+        # PIN_DIR[3] -> Coil 4 - Y Coil
+        # PIN_DIR[4] -> Coil 5 - X Coil
+        # PIN_DIR[5] -> Coil 6 - X Coil
         self.PIN_DIR = [16, 21, 6, 19, 22, 23]
 
         PWM_FREQUENCY = 1000  # Hz
