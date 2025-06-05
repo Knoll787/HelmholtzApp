@@ -8,8 +8,6 @@ class Coils:
         # Assign MockPWMPin to all PWM pins
         factory = MockFactory()
         Device.pin_factory = factory
-        
-
 
         # PWM_PINS[0] -> Coil 1 - Z Coil
         # PWM_PINS[1] -> Coil 2 - Z Coil
