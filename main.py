@@ -7,6 +7,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QDoubleSpinBox, QGridLayout, QHBoxLayout, QTabWidget, QComboBox, QTableWidget, QTableWidgetItem
 )
 from PyQt5.QtSvg import (QSvgWidget, QSvgRenderer) 
+from hardware import coils
 
 
 class CameraTab(QWidget):
@@ -69,17 +70,27 @@ class MovementTab(QWidget):
 
         # Top row layout for label and combo box
         top_layout = QHBoxLayout()
+        bottom_layout = QHBoxLayout()
         top_layout.addWidget(self.label)
         top_layout.addWidget(self.combo_box)
         top_layout.addStretch()
 
         # Layout where dynamic content will be placed
         self.dynamic_layout = QVBoxLayout()
+        
+        # Action Buttons
+        btn_submit = QPushButton("Sumbit")
+        btn_reset= QPushButton("Reset")
+        bottom_layout.addWidget(btn_submit)
+        bottom_layout.addWidget(btn_reset)
+
 
         # Overall layout
         main_layout = QVBoxLayout()
         main_layout.addLayout(top_layout)
         main_layout.addLayout(self.dynamic_layout)
+        main_layout.addLayout(bottom_layout)
+
         self.setLayout(main_layout)
 
         # Load initial mode
@@ -93,6 +104,12 @@ class MovementTab(QWidget):
                 widget.deleteLater()
             elif item.layout():
                 self.clear_layout(item.layout())
+
+    def btn_sumbit_action(self):
+        return 
+
+    def btn_reset_action(self):
+        return 
 
     def on_mode_changed(self, mode):
         self.clear_layout(self.dynamic_layout)
