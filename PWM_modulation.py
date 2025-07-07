@@ -6,6 +6,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
 import time
+from gpiozero import PWMOutputDevice, OutputDevice, Device
+import math
 
 # GPIO Mock as before (omitted here for brevity)...
 
@@ -104,8 +106,85 @@ class PWMControlApp(QWidget):
         event.accept()
 
 
+"""
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     window = PWMControlApp()
     window.show()
     sys.exit(app.exec_())
+"""
+
+print("Coil Frequency (Hz)")
+f_x = float(input("Frequency - X: "))
+f_y = float(input("Frequency - Y: "))
+f_z = float(input("Frequency - Z: "))
+
+print("\nCoil Current (Amplitude: 0.0 to 1.0)")
+i_x = float(input("Current - X: "))
+i_y = float(input("Current - Y: "))
+i_z = float(input("Current - Z: "))
+
+print("\nCoil Phase (degrees)")
+phi_x = float(input("Phase - X: "))
+phi_y = float(input("Phase - Y: "))
+phi_z = float(input("Phase - Z: "))
+
+# Convert degrees to radians
+phi_x = math.radians(phi_x)
+phi_y = math.radians(phi_y)
+phi_z = math.radians(phi_z)
+
+# --- SETUP OUTPUT DEVICES ---
+
+# Enable (PWM) Pins always ON
+for pin in [12, 20, 5, 13, 17, 27]:
+    OutputDevice(pin).on()
+
+# Direction (PWM) Pins
+DIR_Z1 = PWMOutputDevice(16)
+DIR_Z2 = PWMOutputDevice(21)
+DIR_Y3 = PWMOutputDevice(6)
+DIR_Y4 = PWMOutputDevice(19)
+DIR_X5 = PWMOutputDevice(22)
+DIR_X6 = PWMOutputDevice(23)
+
+# Initialize to 50% duty cycle (0 current)
+for device in [DIR_Z1, DIR_Z2, DIR_Y3, DIR_Y4, DIR_X5, DIR_X6]:
+    device.value = 0.5
+    device.frequency = 5000
+
+# --- PWM CONTROL LOOP ---
+print("\nRunning PWM modulation. Press Ctrl+C to stop.\n")
+try:
+    start_time = time.time()
+    while True:
+        t = time.time() - start_time
+
+        # Compute sinusoidal PWM values (centered at 0.5)
+        pwm_x = 0.5 + i_x * math.sin(2 * math.pi * f_x * t + phi_x) / 2
+        pwm_y = 0.5 + i_y * math.sin(2 * math.pi * f_y * t + phi_y) / 2
+        pwm_z = 0.5 + i_z * math.sin(2 * math.pi * f_z * t + phi_z) / 2
+
+        # Clamp values between 0 and 1 (safety)
+        pwm_x = max(0.0, min(1.0, pwm_x))
+        pwm_y = max(0.0, min(1.0, pwm_y))
+        pwm_z = max(0.0, min(1.0, pwm_z))
+
+        # Apply to both coils in each pair
+        DIR_X5.value = pwm_x
+        DIR_X6.value = pwm_x
+
+        DIR_Y3.value = pwm_y
+        DIR_Y4.value = pwm_y
+
+        DIR_Z1.value = pwm_z
+        DIR_Z2.value = pwm_z
+
+        time.sleep(0.001)  # 100 Hz update rate
+
+except KeyboardInterrupt:
+    print("\nPWM modulation stopped.")
+
+    # Reset to 50% (0 current)
+    for device in [DIR_Z1, DIR_Z2, DIR_Y3, DIR_Y4, DIR_X5, DIR_X6]:
+        device.value = 0.5
