@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtSvg import (QSvgWidget, QSvgRenderer) 
 from hardware import coils
-
+import numpy as np
 
 class CameraTab(QWidget):
     def __init__(self):
@@ -78,6 +78,13 @@ class MovementTab(QWidget):
         # Layout where dynamic content will be placed
         self.dynamic_layout = QVBoxLayout()
         
+        # Layout for the current system state
+        self.current_values = []
+        self.pwm_values = []
+        self.field_values = []
+        self.param_layout = QGridLayout()
+        self.load_params() 
+        
         # Action Buttons
         btn_submit = QPushButton("Sumbit")
         btn_reset= QPushButton("Reset")
@@ -91,6 +98,7 @@ class MovementTab(QWidget):
         main_layout = QVBoxLayout()
         main_layout.addLayout(top_layout)
         main_layout.addLayout(self.dynamic_layout)
+        main_layout.addLayout(self.param_layout)
         main_layout.addLayout(bottom_layout)
 
         self.setLayout(main_layout)
@@ -110,8 +118,16 @@ class MovementTab(QWidget):
     def btn_submit_action(self):
         mode = self.combo_box.currentText()
         if mode == "Field Alignment":
-            print(mode)
-            # Do Stuff here
+            # Field Strength
+            b = [self.bx_spin.value(), self.bx_spin.value(),
+                 self.by_spin.value(), self.by_spin.value(),
+                 self.bz_spin.value(), self.bz_spin.value()]
+
+            self.x= coils.field_to_pwm(np.array(b))
+            self.y= coils.field_to_current(np.array(b))
+            self.update_params()
+
+
         elif mode == "Rolling":
             print(mode)
             # Do Stuff here
@@ -123,7 +139,19 @@ class MovementTab(QWidget):
             # Do Stuff here
 
     def btn_reset_action(self):
-        print("Goodbye World")
+        mode = self.combo_box.currentText()
+        if mode == "Field Alignment":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Rolling":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Tumbling":
+            print(mode)
+            # Do Stuff here
+        elif mode == "Path Following":
+            print(mode)
+            # Do Stuff here
 
     def on_mode_changed(self, mode):
         self.clear_layout(self.dynamic_layout)
@@ -163,30 +191,38 @@ class MovementTab(QWidget):
         self.dynamic_layout.addStretch()
 
 
-        # Coil Parameters 
-        param_layout = QGridLayout()
-        header_current = QLabel("Current [A]")
-        header_PWM = QLabel("PWM Duty Cycle [%]")
+    def load_params(self):
+        self.param_layout.addWidget(QLabel("<b>Current (A)</b>"), 0, 0, alignment=Qt.AlignCenter)
+        self.param_layout.addWidget(QLabel("<b>PWM (Duty Cycle)</b>"), 0, 1, alignment=Qt.AlignCenter)
+
+        # Create label holders for 6 values each
+        self.current_values = []
+        self.pwm_values = []
+
+        for i in range(6):
+            current_label = QLabel("0.0 A")
+            pwm_label = QLabel("0.0 %")
+
+            current_label.setAlignment(Qt.AlignCenter)
+            pwm_label.setAlignment(Qt.AlignCenter)
+
+            self.current_values.append(current_label)
+            self.pwm_values.append(pwm_label)
+
+            self.param_layout.addWidget(current_label, i + 1, 0)
+            self.param_layout.addWidget(pwm_label, i + 1, 1)
+
+
         
-        x, y = 5, 68
-        I = []
-        for i in range(1, 7):
-            I.append(QLabel("I" + str(i) +":\t" + str(x)))
+    def update_params(self):
+        for i in range(6):
+            current_value = self.x[i]
+            pwm_value = self.y[i] 
 
-        PWM = []
-        for i in range(1, 7):
-            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
+            self.current_values[i].setText(f"{current_value:.2f}")
+            self.pwm_values[i].setText(f"{pwm_value:.2f}%")
 
-        param_layout.addWidget(header_current, 0, 0)
-        param_layout.addWidget(header_PWM, 0, 1)
 
-        for i in range(1,7):
-            param_layout.addWidget(I[i-1], i, 0)
-
-        for i in range(1,7):
-            param_layout.addWidget(PWM[i-1], i, 1)
-            
-        self.dynamic_layout.addLayout(param_layout)
 
     def load_rolling_ui(self):
         field_layout = QGridLayout()
@@ -219,31 +255,7 @@ class MovementTab(QWidget):
         # Spacer
         self.dynamic_layout.addStretch()
         
-        # Coil Parameters 
-        param_layout = QGridLayout()
-        header_current = QLabel("Current [A]")
-        header_PWM = QLabel("PWM Duty Cycle [%]")
-        
-        x, y = 5, 68
-        I = []
-        for i in range(1, 7):
-            I.append(QLabel("I" + str(i) +":\t" + str(x)))
 
-        PWM = []
-        for i in range(1, 7):
-            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
-
-        param_layout.addWidget(header_current, 0, 0)
-        param_layout.addWidget(header_PWM, 0, 1)
-
-        for i in range(1,7):
-            param_layout.addWidget(I[i-1], i, 0)
-
-        for i in range(1,7):
-            param_layout.addWidget(PWM[i-1], i, 1)
-        self.dynamic_layout.addLayout(param_layout)
-
-        
 
     def load_tumbling_ui(self):
         field_layout = QGridLayout()
@@ -276,29 +288,6 @@ class MovementTab(QWidget):
         # Spacer
         self.dynamic_layout.addStretch()
         
-        # Coil Parameters 
-        param_layout = QGridLayout()
-        header_current = QLabel("Current [A]")
-        header_PWM = QLabel("PWM Duty Cycle [%]")
-        
-        x, y = 5, 68
-        I = []
-        for i in range(1, 7):
-            I.append(QLabel("I" + str(i) +":\t" + str(x)))
-
-        PWM = []
-        for i in range(1, 7):
-            PWM.append(QLabel("PWM" + str(i) +":\t" + str(y)))
-
-        param_layout.addWidget(header_current, 0, 0)
-        param_layout.addWidget(header_PWM, 0, 1)
-
-        for i in range(1,7):
-            param_layout.addWidget(I[i-1], i, 0)
-
-        for i in range(1,7):
-            param_layout.addWidget(PWM[i-1], i, 1)
-        self.dynamic_layout.addLayout(param_layout)
 
     def load_path_following_ui(self):
         label = QLabel("Path Following mode is under development.")
@@ -330,6 +319,7 @@ class HelmholtzApp(QWidget):
 
 
 if __name__ == '__main__':
+    #hardware = coils.Coils()
     app = QApplication(sys.argv)
     window = HelmholtzApp()
     window.show()

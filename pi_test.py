@@ -18,26 +18,57 @@ z_dir2 = OutputDevice(21)
 
 
 
+# X Coils
 x_dir1.on()
-input("Next...")
+input("Pin 15")
 x_dir1.off()
 
 x_dir2.on()
-input("Next...")
-x_dir2.on()
+input("Pin 16")
+x_dir2.off()
 
+
+# Y Coils
 y_dir1.on()
-input("Next...")
+input("Pin 31")
 y_dir1.off()
 
 y_dir2.on()
-input("Next...")
-y_dir2.on()
+input("Pin 35")
+y_dir2.off()
 
+
+# Z Coils
 z_dir1.on()
-input("Next...")
+input("Pin 36")
 z_dir1.off()
 
 z_dir2.on()
-input("Next...")
-z_dir2.on()
+input("Pin 40")
+z_dir2.off()
+
+
+# PWM
+x_pwm1.value = 0.75
+input("X PWM 1")
+x_pwm1.value = 0.00
+
+x_pwm2.value = 0.75
+input("X PWM 2")
+x_pwm2.value = 0.00
+
+y_pwm1.value = 0.75
+input("Y PWM 1")
+y_pwm1.value = 0.00
+
+y_pwm2.value = 0.75
+input("Y PWM 2")
+y_pwm2.value = 0.00
+
+z_pwm1.value = 0.75
+input("Z PWM 1")
+z_pwm1.value = 0.00
+
+z_pwm2.value = 0.75
+input("Z PWM 2")
+z_pwm2.value = 0.0
