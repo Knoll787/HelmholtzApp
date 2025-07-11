@@ -9,6 +9,7 @@ from hardware import coils
 
 
 
+"""
 class MainWindow(QMainWindow):
 	def __init__(self):
 		super().__init__()
@@ -105,7 +106,111 @@ class MainWindow(QMainWindow):
 		layout.addWidget(stats_widget)
 		layout.addWidget(control_widget)
 		layout.addWidget(state_widget)
-		
+"""	
+from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QGridLayout, 
+                            QLabel, QPushButton, QHBoxLayout)
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.coil_data = self.initialize_coil_data()
+        self.setup_ui()
+        
+    def initialize_coil_data(self):
+        """Create data structure for all coil information"""
+        return {
+            'stats': {
+                f'coil_{i}': {
+                    'name': f'Coil {i}',
+                    'pwm': {'value': 0, 'label': None, 'unit': '%'},
+                    'current': {'value': 0, 'label': None, 'unit': 'A'}
+                } for i in range(1, 7)  # Coils 1-6
+            },
+            'controls': {
+                'buttons': ['Reset', 'Set']
+            }
+        }
+
+    def setup_ui(self):
+        """Initialize all UI components"""
+        self.setWindowTitle("Coil Interface")
+        self.setFixedSize(640, 640)
+
+        # Main layout and central widget
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+        main_layout = QVBoxLayout(central_widget)
+
+        # Create and add all components
+        self.create_stats_section(main_layout)
+        self.create_control_section(main_layout)
+        self.create_state_section(main_layout)
+
+    def create_stats_section(self, parent_layout):
+        """Create the statistics display grid"""
+        stats_widget = QWidget()
+        stats_layout = QGridLayout(stats_widget)
+
+        # Add title
+        stats_layout.addWidget(QLabel("System Stats"), 0, 0, 1, 8)
+
+        # Create coil stat displays using data structure
+        for i, (coil_id, coil) in enumerate(self.coil_data['stats'].items()):
+            row = 1 + (i // 2) * 2  # 1, 1, 3, 3, 5, 5
+            col = 0 if i % 2 == 0 else 4  # Alternating columns
+
+            # Add coil name
+            stats_layout.addWidget(QLabel(coil['name']), row, col)
+
+            # Create and add PWM display
+            pwm_label = QLabel(str(coil['pwm']['value']))
+            coil['pwm']['label'] = pwm_label
+            stats_layout.addWidget(QLabel(f"PWM [{coil['pwm']['unit']}]:"), row + 1, col)
+            stats_layout.addWidget(pwm_label, row + 1, col + 1)
+
+            # Create and add current display
+            current_label = QLabel(str(coil['current']['value']))
+            coil['current']['label'] = current_label
+            stats_layout.addWidget(QLabel(f"Current [{coil['current']['unit']}]:"), row + 1, col + 2)
+            stats_layout.addWidget(current_label, row + 1, col + 3)
+
+        parent_layout.addWidget(stats_widget)
+
+    def create_control_section(self, parent_layout):
+        """Create the control section"""
+        control_widget = QWidget()
+        control_layout = QGridLayout(control_widget)
+        control_layout.addWidget(QLabel("Coil Control"))
+        
+        # Here you would add control elements using the same data-driven approach
+        # Example: for each coil, add sliders/buttons for PWM and current control
+        
+        parent_layout.addWidget(control_widget)
+
+    def create_state_section(self, parent_layout):
+        """Create the state/action buttons section"""
+        state_widget = QWidget()
+        state_layout = QHBoxLayout(state_widget)
+
+        # Create buttons from data structure
+        for btn_text in self.coil_data['controls']['buttons']:
+            button = QPushButton(btn_text)
+            setattr(self, f'btn_{btn_text.lower()}', button)
+            state_layout.addWidget(button)
+
+        parent_layout.addWidget(state_widget)
+
+    def update_coil_value(self, coil_num, pwm=None, current=None):
+        """Update displayed coil values"""
+        coil = self.coil_data['stats'][f'coil_{coil_num}']
+        
+        if pwm is not None:
+            coil['pwm']['value'] = pwm
+            coil['pwm']['label'].setText(str(pwm))
+            
+        if current is not None:
+            coil['current']['value'] = current
+            coil['current']['label'].setText(str(current))
 
 
 def main():
