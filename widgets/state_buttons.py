@@ -1,4 +1,5 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import (QWidget, QHBoxLayout, QPushButton, 
+                            QSpacerItem, QSizePolicy)
 from theme import DraculaTheme
 
 class StateButtonsWidget(QWidget):
@@ -8,10 +9,19 @@ class StateButtonsWidget(QWidget):
         self.init_ui()
 
     def init_ui(self):
-        layout = QHBoxLayout(self)
-        layout.setSpacing(15)
-        layout.setContentsMargins(0, 10, 0, 0)
-
+        # Create main layout
+        main_layout = QHBoxLayout(self)
+        main_layout.setContentsMargins(0, 10, 0, 0)
+        
+        # Create a container widget for centered buttons
+        button_container = QWidget()
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setSpacing(15)
+        
+        # Add stretchable space before buttons
+        main_layout.addStretch()
+        
+        # Add buttons to the centered layout
         for btn_text in self.coil_data.controls['buttons']:
             button = QPushButton(btn_text)
             button.setStyleSheet(f"""
@@ -32,9 +42,13 @@ class StateButtonsWidget(QWidget):
                 button.clicked.connect(self.reset_sliders)
             
             setattr(self, f'btn_{btn_text.lower()}', button)
-            layout.addWidget(button)
-
-        layout.addStretch()
+            button_layout.addWidget(button)
+        
+        # Add the button container to main layout
+        main_layout.addWidget(button_container)
+        
+        # Add stretchable space after buttons
+        main_layout.addStretch()
 
     def reset_sliders(self):
         for axis, control in self.coil_data.controls['axes'].items():
