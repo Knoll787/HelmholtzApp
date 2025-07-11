@@ -1,114 +1,9 @@
 import sys
 from PyQt6.QtCore import QTimer, Qt
-from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QPushButton,
-    QGridLayout, QHBoxLayout, QComboBox, QTabWidget, QMainWindow, QMenu
-)
-
 from hardware import coils
-
-
-
-"""
-class MainWindow(QMainWindow):
-	def __init__(self):
-		super().__init__()
-		self.setup_ui()
-		
-	def setup_ui(self):
-		self.setWindowTitle("Coil Interface")
-		self.setFixedSize(640, 640)
-
-		central_widget = QWidget()
-		self.setCentralWidget(central_widget)
-		layout = QVBoxLayout(central_widget)
-		
-
-		stats_widget = QWidget(central_widget)
-		label_coil1_pwm = QLabel("0")
-		label_coil1_current = QLabel("0")
-		label_coil2_pwm = QLabel("0")
-		label_coil2_current = QLabel("0")
-		label_coil3_pwm = QLabel("0")
-		label_coil3_current = QLabel("0")
-		label_coil4_pwm = QLabel("0")
-		label_coil4_current = QLabel("0")
-		label_coil5_pwm = QLabel("0")
-		label_coil5_current = QLabel("0")
-		label_coil6_pwm = QLabel("0")
-		label_coil6_current = QLabel("0")
-
-		stats_layout = QGridLayout(stats_widget)
-		stats_layout.addWidget(QLabel("System Stats"), 0, 0)
-
-		stats_layout.addWidget(QLabel("Coil 1"),       1, 0)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     2, 0)
-		stats_layout.addWidget(label_coil1_pwm,        2, 1)
-		stats_layout.addWidget(QLabel("Current [A]:"), 2, 2)
-		stats_layout.addWidget(label_coil1_current,    2, 3)
-
-		stats_layout.addWidget(QLabel("Coil 2"),       1, 4)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     2, 4)
-		stats_layout.addWidget(label_coil2_pwm,        2, 5)
-		stats_layout.addWidget(QLabel("Current [A]:"), 2, 6)
-		stats_layout.addWidget(label_coil2_current,    2, 7)
-		
-		stats_layout.addWidget(QLabel("Coil 3"),       3, 0)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     4, 0)
-		stats_layout.addWidget(label_coil3_pwm,        4, 1)
-		stats_layout.addWidget(QLabel("Current [A]:"), 4, 2)
-		stats_layout.addWidget(label_coil3_current,    4, 3)
-
-		stats_layout.addWidget(QLabel("Coil 4"),       3, 4)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     4, 4)
-		stats_layout.addWidget(label_coil4_pwm,        4, 5)
-		stats_layout.addWidget(QLabel("Current [A]:"), 4, 6)
-		stats_layout.addWidget(label_coil4_current,    4, 7)
-		
-		stats_layout.addWidget(QLabel("Coil 5"),       5, 0)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     6, 0)
-		stats_layout.addWidget(label_coil5_pwm,        6, 1)
-		stats_layout.addWidget(QLabel("Current [A]:"), 6, 2)
-		stats_layout.addWidget(label_coil5_current,    6, 3)
-
-		stats_layout.addWidget(QLabel("Coil 6"),       5, 4)
-		stats_layout.addWidget(QLabel("PWM [%]:"),     6, 4)
-		stats_layout.addWidget(label_coil6_pwm,        6, 5)
-		stats_layout.addWidget(QLabel("Current [A]:"), 6, 6)
-		stats_layout.addWidget(label_coil6_current,    6, 7)
-		
-		
-
-
-
-
-		control_widget = QWidget(central_widget)
-		self.label2 = QLabel("Coil Control")
-		control_layout = QGridLayout(control_widget)
-		control_layout.addWidget(QLabel("Coil Control"))
-
-		
-
-
-
-
-
-
-		state_widget = QWidget(central_widget)
-		self.btn_reset = QPushButton("Reset")	
-		self.btn_set = QPushButton("Set")	
-		state_layout = QHBoxLayout(state_widget)
-		state_layout.addWidget(self.btn_reset)
-		state_layout.addWidget(self.btn_set)
-
-		
-		
-		layout.addWidget(stats_widget)
-		layout.addWidget(control_widget)
-		layout.addWidget(state_widget)
-"""	
 from PyQt6.QtWidgets import (QMainWindow, QWidget, QVBoxLayout, QGridLayout, 
-                            QLabel, QPushButton, QHBoxLayout)
+                            QLabel, QPushButton, QHBoxLayout, QComboBox, 
+                            QSlider, QGroupBox, QMainWindow, QApplication)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -127,14 +22,19 @@ class MainWindow(QMainWindow):
                 } for i in range(1, 7)  # Coils 1-6
             },
             'controls': {
-                'buttons': ['Reset', 'Set']
+                'buttons': ['Reset', 'Set'],
+                'axes': {
+                    'X': {'type': 'Helmholtz', 'value': 0, 'slider': None, 'combo': None},
+                    'Y': {'type': 'Helmholtz', 'value': 0, 'slider': None, 'combo': None},
+                    'Z': {'type': 'Helmholtz', 'value': 0, 'slider': None, 'combo': None}
+                }
             }
         }
 
     def setup_ui(self):
         """Initialize all UI components"""
         self.setWindowTitle("Coil Interface")
-        self.setFixedSize(640, 640)
+        self.setFixedSize(800, 800)  # Increased size for new controls
 
         # Main layout and central widget
         central_widget = QWidget()
@@ -177,13 +77,53 @@ class MainWindow(QMainWindow):
         parent_layout.addWidget(stats_widget)
 
     def create_control_section(self, parent_layout):
-        """Create the control section"""
+        """Create the control section with axis controls"""
         control_widget = QWidget()
-        control_layout = QGridLayout(control_widget)
+        control_layout = QVBoxLayout(control_widget)
+        
+        # Add title
         control_layout.addWidget(QLabel("Coil Control"))
         
-        # Here you would add control elements using the same data-driven approach
-        # Example: for each coil, add sliders/buttons for PWM and current control
+        # Create axis control group
+        axis_group = QGroupBox("Axis Configuration")
+        axis_layout = QGridLayout()
+        
+        # Add row headers
+        axis_layout.addWidget(QLabel("Axis"), 0, 0)
+        axis_layout.addWidget(QLabel("Coil Type"), 0, 1)
+        axis_layout.addWidget(QLabel("Value"), 0, 2)
+        
+        # Create controls for each axis
+        for row, (axis, config) in enumerate(self.coil_data['controls']['axes'].items(), start=1):
+            # Axis label
+            axis_layout.addWidget(QLabel(f"{axis}-Axis"), row, 0)
+            
+            # Coil type dropdown
+            coil_type_combo = QComboBox()
+            coil_type_combo.addItems(["Helmholtz", "Maxwell"])
+            coil_type_combo.setCurrentText(config['type'])
+            coil_type_combo.currentTextChanged.connect(lambda text, a=axis: self.on_coil_type_changed(a, text))
+            axis_layout.addWidget(coil_type_combo, row, 1)
+            config['combo'] = coil_type_combo
+            
+            # Value slider
+            slider = QSlider(Qt.Orientation.Horizontal)
+            slider.setRange(-100, 100)
+            slider.setValue(0)
+            slider.setTickPosition(QSlider.TickPosition.TicksBelow)
+            slider.setTickInterval(10)
+            slider.valueChanged.connect(
+                lambda value, a=axis: self.on_slider_changed(a, value))
+            axis_layout.addWidget(slider, row, 2)
+            config['slider'] = slider
+            
+            # Value display label
+            value_label = QLabel("0")
+            axis_layout.addWidget(value_label, row, 3)
+            config['label'] = value_label
+        
+        axis_group.setLayout(axis_layout)
+        control_layout.addWidget(axis_group)
         
         parent_layout.addWidget(control_widget)
 
@@ -196,9 +136,30 @@ class MainWindow(QMainWindow):
         for btn_text in self.coil_data['controls']['buttons']:
             button = QPushButton(btn_text)
             setattr(self, f'btn_{btn_text.lower()}', button)
+            if btn_text == "Reset":
+                button.clicked.connect(self.reset_sliders)
             state_layout.addWidget(button)
 
         parent_layout.addWidget(state_widget)
+
+    def on_coil_type_changed(self, axis, coil_type):
+        """Handle coil type selection changes"""
+        self.coil_data['controls']['axes'][axis]['type'] = coil_type
+        print(f"{axis}-Axis changed to {coil_type} coil")
+
+    def on_slider_changed(self, axis, value):
+        """Handle slider value changes"""
+        self.coil_data['controls']['axes'][axis]['value'] = value
+        self.coil_data['controls']['axes'][axis]['label'].setText(str(value))
+        print(f"{axis}-Axis value: {value}")
+
+    def reset_sliders(self):
+        """Reset all sliders to 0"""
+        for axis, config in self.coil_data['controls']['axes'].items():
+            config['slider'].setValue(0)
+            config['label'].setText("0")
+            config['value'] = 0
+        print("All sliders reset to 0")
 
     def update_coil_value(self, coil_num, pwm=None, current=None):
         """Update displayed coil values"""
