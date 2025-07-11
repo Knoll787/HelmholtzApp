@@ -34,9 +34,12 @@ class MainWindow(QMainWindow):
 		control_layout.addWidget(self.label2)
 
 		state_widget = QWidget(central_widget)
-		self.label3 = QLabel("Commit Changes")
+		self.btn_reset = QPushButton("Reset")	
+		self.btn_set = QPushButton("Set")	
+
 		state_layout = QHBoxLayout(state_widget)
-		state_layout.addWidget(self.label3)
+		state_layout.addWidget(self.btn_reset)
+		state_layout.addWidget(self.btn_set)
 
 		
 		
