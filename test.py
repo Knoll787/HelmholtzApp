@@ -80,16 +80,16 @@ def update_state():
 	print(f"Slider Values: {valx:.2f}, {valy:.2f}, {valz:.2f}")
 
 def reset_state():
-    set_coil(coil1_pwm, coil1_dir, abs(0), True)
-    set_coil(coil2_pwm, coil2_dir, abs(0), True)
+    set_coil(coil1_pwm, coil1_dir, 0.0, True)
+    set_coil(coil2_pwm, coil2_dir, 0.0, True)
 
     # Y-Coils
-    set_coil(coil3_pwm, coil3_dir, abs(0), True)
-    set_coil(coil4_pwm, coil4_dir, abs(0), True)
+    set_coil(coil3_pwm, coil3_dir, 0.0, True)
+    set_coil(coil4_pwm, coil4_dir, 0.0, True)
 
     # X-Coils
-    set_coil(coil5_pwm, coil5_dir, abs(0), True)
-    set_coil(coil6_pwm, coil6_dir, abs(0), True)
+    set_coil(coil5_pwm, coil5_dir, 0.0, True)
+    set_coil(coil6_pwm, coil6_dir, 0.0, True)
 
 
 
