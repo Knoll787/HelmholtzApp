@@ -1,14 +1,14 @@
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QSlider, QPushButton
+    QApplication, QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QComboBox
 )
 from PyQt6.QtCore import Qt
 import sys
 import platform
 
-# Determine if we're running on a Raspberry Pi
+# Detect platform
 is_rpi = platform.system() == "Linux" and "arm" in platform.machine()
 
-# Setup GPIO mocks for non-Raspberry Pi environments
+# GPIO Setup or Mock
 if is_rpi:
     from gpiozero import PWMOutputDevice, OutputDevice
 else:
@@ -36,7 +36,7 @@ else:
         def __repr__(self):
             return f"MockOutput(pin={self.pin}, active={self.active})"
 
-# GPIO pin setup
+# GPIO pins
 PWM_PIN1, DIR_PIN1 = 12, 16
 PWM_PIN2, DIR_PIN2 = 20, 21
 PWM_PIN3, DIR_PIN3 = 5, 6
@@ -66,11 +66,11 @@ class MotorControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Slider Control")
-        self.setGeometry(100, 100, 300, 400)
+        self.setGeometry(100, 100, 300, 500)
         
         layout = QVBoxLayout()
 
-        # X-axis
+        # ========== X-Axis ==========
         self.x_label = QLabel("X-Axis")
         layout.addWidget(self.x_label)
 
@@ -84,7 +84,12 @@ class MotorControlGUI(QWidget):
         self.label1 = QLabel("0.00")
         layout.addWidget(self.label1)
 
-        # Y-axis
+        self.x_mode = QComboBox()
+        self.x_mode.addItems(["Helmholtz", "Maxwell"])
+        layout.addWidget(QLabel("X Coil Mode"))
+        layout.addWidget(self.x_mode)
+
+        # ========== Y-Axis ==========
         self.y_label = QLabel("Y-Axis")
         layout.addWidget(self.y_label)
 
@@ -98,7 +103,12 @@ class MotorControlGUI(QWidget):
         self.label2 = QLabel("0.00")
         layout.addWidget(self.label2)
 
-        # Z-axis
+        self.y_mode = QComboBox()
+        self.y_mode.addItems(["Helmholtz", "Maxwell"])
+        layout.addWidget(QLabel("Y Coil Mode"))
+        layout.addWidget(self.y_mode)
+
+        # ========== Z-Axis ==========
         self.z_label = QLabel("Z-Axis")
         layout.addWidget(self.z_label)
 
@@ -112,7 +122,12 @@ class MotorControlGUI(QWidget):
         self.label3 = QLabel("0.00")
         layout.addWidget(self.label3)
 
-        # Buttons
+        self.z_mode = QComboBox()
+        self.z_mode.addItems(["Helmholtz", "Maxwell"])
+        layout.addWidget(QLabel("Z Coil Mode"))
+        layout.addWidget(self.z_mode)
+
+        # ========== Buttons ==========
         self.update_button = QPushButton("Update State")
         self.update_button.clicked.connect(self.update_state)
         layout.addWidget(self.update_button)
@@ -137,14 +152,31 @@ class MotorControlGUI(QWidget):
         dir_y = valy >= 0
         dir_z = valz >= 0
 
+        mode_x = self.x_mode.currentText()
+        mode_y = self.y_mode.currentText()
+        mode_z = self.z_mode.currentText()
+
+        # Apply mode logic
+        # Helmholtz: both coils same direction
+        # Maxwell: coils opposite directions
+
+        # Z-Coils
         set_coil(coil1_pwm, coil1_dir, abs(valz), dir_z)
-        set_coil(coil2_pwm, coil2_dir, abs(valz), dir_z)
+        set_coil(coil2_pwm, coil2_dir, abs(valz),
+                 dir_z if mode_z == "Helmholtz" else not dir_z)
+
+        # Y-Coils
         set_coil(coil3_pwm, coil3_dir, abs(valy), dir_y)
-        set_coil(coil4_pwm, coil4_dir, abs(valy), dir_y)
+        set_coil(coil4_pwm, coil4_dir, abs(valy),
+                 dir_y if mode_y == "Helmholtz" else not dir_y)
+
+        # X-Coils
         set_coil(coil5_pwm, coil5_dir, abs(valx), dir_x)
-        set_coil(coil6_pwm, coil6_dir, abs(valx), dir_x)
+        set_coil(coil6_pwm, coil6_dir, abs(valx),
+                 dir_x if mode_x == "Helmholtz" else not dir_x)
 
         print(f"Slider Values: {valx:.2f}, {valy:.2f}, {valz:.2f}")
+        print(f"Modes: X={mode_x}, Y={mode_y}, Z={mode_z}")
 
     def reset_state(self):
         for coil_pwm, coil_dir in [
