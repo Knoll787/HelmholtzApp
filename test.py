@@ -6,7 +6,7 @@ import sys
 import platform
 
 # Detect platform
-is_rpi = platform.system() == "Linux" and "arm" in platform.machine()
+is_rpi = platform.system() == "Linux"
 
 # GPIO Setup or Mock
 if is_rpi:
