@@ -66,14 +66,14 @@ class MotorControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Slider Control")
-        self.setGeometry(100, 100, 800, 500)
+        self.setGeometry(100, 100, 900, 500)
         
         main_layout = QVBoxLayout()  # Overall layout
         controls_layout = QHBoxLayout()  # Horizontal layout for X, Y, Z
 
         # ======== X-Axis Column ========
         x_layout = QVBoxLayout()
-        x_layout.addWidget(self.make_divider("X-Axis"))
+        x_layout.addWidget(self.make_divider("X Axis"))
 
         self.x_mode = QComboBox()
         self.x_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
@@ -81,18 +81,15 @@ class MotorControlGUI(QWidget):
         x_layout.addWidget(QLabel("X Coil Mode"))
         x_layout.addWidget(self.x_mode)
 
-        self.slider1 = self.make_slider(x_layout, "Main X Slider")
-        self.label1 = QLabel("0.00")
-        x_layout.addWidget(self.label1)
-
-        self.x_grad_slider1 = self.make_slider(x_layout, "X Coil 1")
-        self.x_grad_slider2 = self.make_slider(x_layout, "X Coil 2")
+        self.slider1, self.label1 = self.make_slider_with_label(x_layout, "Main X Slider")
+        self.x_grad_slider1, self.x_grad_label1 = self.make_slider_with_label(x_layout, "X Coil 1")
+        self.x_grad_slider2, self.x_grad_label2 = self.make_slider_with_label(x_layout, "X Coil 2")
 
         controls_layout.addLayout(x_layout)
 
         # ======== Y-Axis Column ========
         y_layout = QVBoxLayout()
-        y_layout.addWidget(self.make_divider("Y-Axis"))
+        y_layout.addWidget(self.make_divider("Y Axis"))
 
         self.y_mode = QComboBox()
         self.y_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
@@ -100,18 +97,15 @@ class MotorControlGUI(QWidget):
         y_layout.addWidget(QLabel("Y Coil Mode"))
         y_layout.addWidget(self.y_mode)
 
-        self.slider2 = self.make_slider(y_layout, "Main Y Slider")
-        self.label2 = QLabel("0.00")
-        y_layout.addWidget(self.label2)
-
-        self.y_grad_slider1 = self.make_slider(y_layout, "Y Coil 1")
-        self.y_grad_slider2 = self.make_slider(y_layout, "Y Coil 2")
+        self.slider2, self.label2 = self.make_slider_with_label(y_layout, "Main Y Slider")
+        self.y_grad_slider1, self.y_grad_label1 = self.make_slider_with_label(y_layout, "Y Coil 1")
+        self.y_grad_slider2, self.y_grad_label2 = self.make_slider_with_label(y_layout, "Y Coil 2")
 
         controls_layout.addLayout(y_layout)
 
         # ======== Z-Axis Column ========
         z_layout = QVBoxLayout()
-        z_layout.addWidget(self.make_divider("Z-Axis"))
+        z_layout.addWidget(self.make_divider("Z Axis"))
 
         self.z_mode = QComboBox()
         self.z_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
@@ -119,12 +113,9 @@ class MotorControlGUI(QWidget):
         z_layout.addWidget(QLabel("Z Coil Mode"))
         z_layout.addWidget(self.z_mode)
 
-        self.slider3 = self.make_slider(z_layout, "Main Z Slider")
-        self.label3 = QLabel("0.00")
-        z_layout.addWidget(self.label3)
-
-        self.z_grad_slider1 = self.make_slider(z_layout, "Z Coil 1")
-        self.z_grad_slider2 = self.make_slider(z_layout, "Z Coil 2")
+        self.slider3, self.label3 = self.make_slider_with_label(z_layout, "Main Z Slider")
+        self.z_grad_slider1, self.z_grad_label1 = self.make_slider_with_label(z_layout, "Z Coil 1")
+        self.z_grad_slider2, self.z_grad_label2 = self.make_slider_with_label(z_layout, "Z Coil 2")
 
         controls_layout.addLayout(z_layout)
 
@@ -144,21 +135,26 @@ class MotorControlGUI(QWidget):
         self.setLayout(main_layout)
         self.toggle_extra_sliders()
 
-    def make_slider(self, layout, label_text):
+    def make_slider_with_label(self, layout, label_text):
         layout.addWidget(QLabel(label_text))
+        slider_row = QHBoxLayout()
         slider = QSlider(Qt.Orientation.Horizontal)
         slider.setMinimum(-100)
         slider.setMaximum(100)
         slider.setValue(0)
-        slider.valueChanged.connect(self.update_labels)
-        layout.addWidget(slider)
-        return slider
+        value_label = QLabel("0.00")
+        value_label.setFixedWidth(50)
+        slider.valueChanged.connect(lambda: value_label.setText(f"{slider.value()/100:.2f}"))
+        slider_row.addWidget(slider)
+        slider_row.addWidget(value_label)
+        layout.addLayout(slider_row)
+        return slider, value_label
 
     def make_divider(self, text):
         frame = QFrame()
         frame.setFrameShape(QFrame.Shape.HLine)
         frame.setFrameShadow(QFrame.Shadow.Sunken)
-        label = QLabel(f"--- {text} ---")
+        label = QLabel(f"{text}")
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         container = QVBoxLayout()
         container.addWidget(label)
@@ -180,11 +176,6 @@ class MotorControlGUI(QWidget):
         self.z_grad_slider1.setEnabled(self.z_mode.currentText() == "Gradient")
         self.z_grad_slider2.setEnabled(self.z_mode.currentText() == "Gradient")
         self.slider3.setEnabled(self.z_mode.currentText() != "Gradient")
-
-    def update_labels(self):
-        self.label1.setText(f"{self.slider1.value() / 100:.2f}")
-        self.label2.setText(f"{self.slider2.value() / 100:.2f}")
-        self.label3.setText(f"{self.slider3.value() / 100:.2f}")
 
     def update_state(self):
         # Z-axis
@@ -247,7 +238,6 @@ class MotorControlGUI(QWidget):
         self.z_grad_slider1.setValue(0)
         self.z_grad_slider2.setValue(0)
 
-        self.update_labels()
         print("Slider Values: 0.00, 0.00, 0.00")
 
 if __name__ == "__main__":
@@ -255,3 +245,4 @@ if __name__ == "__main__":
     window = MotorControlGUI()
     window.show()
     sys.exit(app.exec())
+f
