@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLabel, QSlider, QPushButton, QComboBox, QFrame
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QSlider, QPushButton, QComboBox, QFrame
 )
 from PyQt6.QtCore import Qt
 import sys
@@ -66,70 +66,82 @@ class MotorControlGUI(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Slider Control")
-        self.setGeometry(100, 100, 350, 750)
+        self.setGeometry(100, 100, 800, 500)
         
-        layout = QVBoxLayout()
+        main_layout = QVBoxLayout()  # Overall layout
+        controls_layout = QHBoxLayout()  # Horizontal layout for X, Y, Z
 
-        # ======== X-Axis Section ========
-        layout.addWidget(self.make_divider("X-Axis Control"))
+        # ======== X-Axis Column ========
+        x_layout = QVBoxLayout()
+        x_layout.addWidget(self.make_divider("X-Axis"))
 
         self.x_mode = QComboBox()
         self.x_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
         self.x_mode.currentIndexChanged.connect(self.toggle_extra_sliders)
-        layout.addWidget(QLabel("X Coil Mode"))
-        layout.addWidget(self.x_mode)
+        x_layout.addWidget(QLabel("X Coil Mode"))
+        x_layout.addWidget(self.x_mode)
 
-        self.slider1 = self.make_slider(layout, "Main X Slider")
+        self.slider1 = self.make_slider(x_layout, "Main X Slider")
         self.label1 = QLabel("0.00")
-        layout.addWidget(self.label1)
+        x_layout.addWidget(self.label1)
 
-        self.x_grad_slider1 = self.make_slider(layout, "X Coil 1")
-        self.x_grad_slider2 = self.make_slider(layout, "X Coil 2")
+        self.x_grad_slider1 = self.make_slider(x_layout, "X Coil 1")
+        self.x_grad_slider2 = self.make_slider(x_layout, "X Coil 2")
 
-        # ======== Y-Axis Section ========
-        layout.addWidget(self.make_divider("Y-Axis Control"))
+        controls_layout.addLayout(x_layout)
+
+        # ======== Y-Axis Column ========
+        y_layout = QVBoxLayout()
+        y_layout.addWidget(self.make_divider("Y-Axis"))
 
         self.y_mode = QComboBox()
         self.y_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
         self.y_mode.currentIndexChanged.connect(self.toggle_extra_sliders)
-        layout.addWidget(QLabel("Y Coil Mode"))
-        layout.addWidget(self.y_mode)
+        y_layout.addWidget(QLabel("Y Coil Mode"))
+        y_layout.addWidget(self.y_mode)
 
-        self.slider2 = self.make_slider(layout, "Main Y Slider")
+        self.slider2 = self.make_slider(y_layout, "Main Y Slider")
         self.label2 = QLabel("0.00")
-        layout.addWidget(self.label2)
+        y_layout.addWidget(self.label2)
 
-        self.y_grad_slider1 = self.make_slider(layout, "Y Coil 1")
-        self.y_grad_slider2 = self.make_slider(layout, "Y Coil 2")
+        self.y_grad_slider1 = self.make_slider(y_layout, "Y Coil 1")
+        self.y_grad_slider2 = self.make_slider(y_layout, "Y Coil 2")
 
-        # ======== Z-Axis Section ========
-        layout.addWidget(self.make_divider("Z-Axis Control"))
+        controls_layout.addLayout(y_layout)
+
+        # ======== Z-Axis Column ========
+        z_layout = QVBoxLayout()
+        z_layout.addWidget(self.make_divider("Z-Axis"))
 
         self.z_mode = QComboBox()
         self.z_mode.addItems(["Helmholtz", "Maxwell", "Gradient"])
         self.z_mode.currentIndexChanged.connect(self.toggle_extra_sliders)
-        layout.addWidget(QLabel("Z Coil Mode"))
-        layout.addWidget(self.z_mode)
+        z_layout.addWidget(QLabel("Z Coil Mode"))
+        z_layout.addWidget(self.z_mode)
 
-        self.slider3 = self.make_slider(layout, "Main Z Slider")
+        self.slider3 = self.make_slider(z_layout, "Main Z Slider")
         self.label3 = QLabel("0.00")
-        layout.addWidget(self.label3)
+        z_layout.addWidget(self.label3)
 
-        self.z_grad_slider1 = self.make_slider(layout, "Z Coil 1")
-        self.z_grad_slider2 = self.make_slider(layout, "Z Coil 2")
+        self.z_grad_slider1 = self.make_slider(z_layout, "Z Coil 1")
+        self.z_grad_slider2 = self.make_slider(z_layout, "Z Coil 2")
+
+        controls_layout.addLayout(z_layout)
+
+        # Add controls row to main layout
+        main_layout.addLayout(controls_layout)
 
         # ======== Buttons Section ========
-        layout.addWidget(self.make_divider("Controls"))
-
+        main_layout.addWidget(self.make_divider("Controls"))
         self.update_button = QPushButton("Update State")
         self.update_button.clicked.connect(self.update_state)
-        layout.addWidget(self.update_button)
+        main_layout.addWidget(self.update_button)
 
         self.reset_button = QPushButton("Reset State")
         self.reset_button.clicked.connect(self.reset_state)
-        layout.addWidget(self.reset_button)
+        main_layout.addWidget(self.reset_button)
 
-        self.setLayout(layout)
+        self.setLayout(main_layout)
         self.toggle_extra_sliders()
 
     def make_slider(self, layout, label_text):
