@@ -37,12 +37,17 @@ else:
             return f"MockOutput(pin={self.pin}, active={self.active})"
 
 # GPIO pins
-PWM_PIN1, DIR_PIN1 = 12, 16
-PWM_PIN2, DIR_PIN2 = 20, 21
-PWM_PIN3, DIR_PIN3 = 5, 6
-PWM_PIN4, DIR_PIN4 = 13, 19
-PWM_PIN5, DIR_PIN5 = 17, 22
-PWM_PIN6, DIR_PIN6 = 27, 23
+# Z - Coils
+PWM_PIN1, DIR_PIN1 = 12, 16 # Motor A
+PWM_PIN2, DIR_PIN2 = 20, 21 # Motor B
+
+# Y - Coils
+PWM_PIN3, DIR_PIN3 = 5, 6   # Motor A
+PWM_PIN4, DIR_PIN4 = 13, 19 # Motor B
+
+# Z - Coils
+PWM_PIN5, DIR_PIN5 = 17, 22 # Motor A
+PWM_PIN6, DIR_PIN6 = 27, 23 # Motor B
 
 coil1_pwm = PWMOutputDevice(PWM_PIN1, frequency=1000)
 coil1_dir = OutputDevice(DIR_PIN1)
