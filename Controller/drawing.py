@@ -1,6 +1,8 @@
 import cv2
 import sdl2
 import sdl2.ext
+from picamera2 import Picamera2, Preview
+from libcamera import Transform
 
 # Init SDL2 for joystick
 sdl2.SDL_Init(sdl2.SDL_INIT_JOYSTICK)
@@ -10,11 +12,11 @@ if sdl2.SDL_NumJoysticks() < 1:
 joystick = sdl2.SDL_JoystickOpen(0)
 print("Connected:", sdl2.SDL_JoystickName(joystick).decode())
 
-# Open camera
-cap = cv2.VideoCapture(0)
-if not cap.isOpened():
-    print("Could not open camera")
-    exit()
+# Init PiCamera2
+picam2 = Picamera2()
+picam2.configure(picam2.create_preview_configuration(main={"format": "BGR888", "size": (480, 480)}))
+transform=Transform(vflip=1) 
+picam2.start()
 
 # Cursor position
 cursor_x, cursor_y = 320, 240
@@ -58,7 +60,7 @@ def poll_controller():
                 drawing = False
 
 
-def update_cursor_position():
+def update_cursor_position(frame_width, frame_height):
     """Move the cursor based on D-pad state."""
     global cursor_x, cursor_y
     if pad_state[BTN_UP]:
@@ -71,17 +73,17 @@ def update_cursor_position():
         cursor_x += MOVE_SPEED
 
     # Keep cursor in frame bounds
-    cursor_x = max(0, min(int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) - 1, cursor_x))
-    cursor_y = max(0, min(int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) - 1, cursor_y))
+    cursor_x = max(0, min(frame_width - 1, cursor_x))
+    cursor_y = max(0, min(frame_height - 1, cursor_y))
 
 
 while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    # Capture frame from PiCamera2
+    frame = picam2.capture_array()
+    frame_height, frame_width = frame.shape[:2]
 
     poll_controller()
-    update_cursor_position()
+    update_cursor_position(frame_width, frame_height)
 
     # Store point if drawing
     if drawing:
@@ -98,5 +100,5 @@ while True:
     if cv2.waitKey(10) & 0xFF == 27:  # ESC to quit
         break
 
-cap.release()
+picam2.stop()
 cv2.destroyAllWindows()
