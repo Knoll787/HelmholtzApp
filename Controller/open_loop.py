@@ -160,7 +160,7 @@ MOVE_SPEED = 5
 
 # ---------------- Event Polling ----------------
 def poll_controller():
-    global drawing
+    global drawing, cursor_x, cursor_y
     event = sdl2.SDL_Event()
     while sdl2.SDL_PollEvent(event):
         if event.type == sdl2.SDL_JOYBUTTONDOWN:
@@ -173,7 +173,15 @@ def poll_controller():
                 pad_state[event.jbutton.button] = False
             elif event.jbutton.button == BTN_DRAW:
                 drawing = False
-        # Axis motion handled continuously in main loop
+        elif event.type == sdl2.SDL_JOYAXISMOTION:
+            # Handle axis motion
+            if event.jaxis.axis == 0:  # X axis
+                x_axis = event.jaxis.value
+                set_magnetic_field(x_axis, last_state["y_axis"])
+            elif event.jaxis.axis == 1:  # Y axis
+                y_axis = event.jaxis.value
+                set_magnetic_field(last_state["x_axis"], y_axis)
+            log_state()
 
 def update_cursor_position():
     global cursor_x, cursor_y
@@ -198,12 +206,6 @@ try:
 
         poll_controller()
         update_cursor_position()
-
-        # --- NEW: update magnetic field + log every loop tick ---
-        x_axis = sdl2.SDL_JoystickGetAxis(joystick, 0)
-        y_axis = sdl2.SDL_JoystickGetAxis(joystick, 1)
-        set_magnetic_field(x_axis, y_axis)
-        log_state()
 
         if drawing:
             overlay_points.append((cursor_x, cursor_y))
