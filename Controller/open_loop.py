@@ -43,6 +43,7 @@ class PiCamera(CameraBase):
                 main={"format": "BGR888", "size": (480, 480)}
             )
         )
+        transform=Transform(vflip=1)
         self.picam2.start()
     def read(self):
         frame = self.picam2.capture_array()
