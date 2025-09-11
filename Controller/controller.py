@@ -15,3 +15,5 @@ while running:
             print(f"Button {event.jbutton.button} pressed")
         elif event.type == sdl2.SDL_JOYAXISMOTION:
             print(f"Axis {event.jaxis.axis} value: {event.jaxis.value}")
+        elif event.type == sdl2.SDL_JOYHATMOTION:
+            print(f"Hat {event.jhat.hat} value: {event.jhat.value}")
