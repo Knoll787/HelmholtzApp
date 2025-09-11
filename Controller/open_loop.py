@@ -40,16 +40,20 @@ class PiCamera(CameraBase):
         self.picam2 = Picamera2()
         self.picam2.configure(
             self.picam2.create_preview_configuration(
-                main={"format": "BGR888", "size": (480, 480)}
+                main={"format": "BGR888", "size": (640, 640)}
             )
         )
         transform=Transform(vflip=1)
         self.picam2.start()
+
     def read(self):
         frame = self.picam2.capture_array()
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
         return True, frame
+
     def release(self):
         self.picam2.stop()
+
     def get_frame_size(self):
         frame = self.picam2.capture_array()
         h, w = frame.shape[:2]
