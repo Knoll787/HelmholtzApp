@@ -1,3 +1,4 @@
+# Primary Component Analysis (PCA) to find the orientation of objects in a webcam feed.
 from __future__ import print_function
 from __future__ import division
 import cv2 as cv
