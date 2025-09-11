@@ -159,8 +159,8 @@ radius = 5
 overlay_points = []
 
 # Controller mappings
-BTN_UP, BTN_DOWN, BTN_LEFT, BTN_RIGHT, BTN_DRAW = 11, 12, 13, 14, 0
-pad_state = {BTN_UP: False, BTN_DOWN: False, BTN_LEFT: False, BTN_RIGHT: False}
+JHAT_UP, JHAT_DOWN, JHAT_LEFT, JHAT_RIGHT, JHAT_CTR, BTN_DRAW = 1, 4, 8, 2, 0, 3
+pad_state = {JHAT_UP: False, JHAT_DOWN: False, JHAT_LEFT: False, JHAT_RIGHT: False}
 MOVE_SPEED = 5
 
 # ---------------- Event Polling ----------------
@@ -168,15 +168,18 @@ def poll_controller():
     global drawing, cursor_x, cursor_y
     event = sdl2.SDL_Event()
     while sdl2.SDL_PollEvent(event):
-        if event.type == sdl2.SDL_JOYBUTTONDOWN:
-            if event.jbutton.button in pad_state:
-                pad_state[event.jbutton.button] = True
-            elif event.jbutton.button == BTN_DRAW:
+        # Movement via D-pad (JHAT)
+        if event.type == sdl2.SDL_JOYHATMOTION:
+            if event.jhat.value == JHAT_CTR:
+                for JHAT in pad_state:
+                    pad_state[JHAT] = False
+            elif event.jhat.value in pad_state:
+                pad_state[event.jhat.value] = True
+        elif event.type == sdl2.SDL_JOYBUTTONDOWN:
+            if event.jbutton.button == BTN_DRAW:
                 drawing = True
         elif event.type == sdl2.SDL_JOYBUTTONUP:
-            if event.jbutton.button in pad_state:
-                pad_state[event.jbutton.button] = False
-            elif event.jbutton.button == BTN_DRAW:
+            if event.jbutton.button == BTN_DRAW:
                 drawing = False
         elif event.type == sdl2.SDL_JOYAXISMOTION:
             # Handle axis motion
@@ -190,13 +193,13 @@ def poll_controller():
 
 def update_cursor_position():
     global cursor_x, cursor_y
-    if pad_state[BTN_UP]:
+    if pad_state[JHAT_UP]:
         cursor_y -= MOVE_SPEED
-    if pad_state[BTN_DOWN]:
+    if pad_state[JHAT_DOWN]:
         cursor_y += MOVE_SPEED
-    if pad_state[BTN_LEFT]:
+    if pad_state[JHAT_LEFT]:
         cursor_x -= MOVE_SPEED
-    if pad_state[BTN_RIGHT]:
+    if pad_state[JHAT_RIGHT]:
         cursor_x += MOVE_SPEED
 
     cursor_x = max(0, min(frame_width - 1, cursor_x))
