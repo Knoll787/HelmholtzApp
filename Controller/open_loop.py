@@ -66,10 +66,10 @@ if ON_PI:
 
     # H-bridge pins: forward/backward for each axis
     PINS = {
-        "X_FWD": 18,
-        "X_BWD": 23,
-        "Y_FWD": 19,
-        "Y_BWD": 24,
+        "X_FWD": 17,
+        "X_BWD": 27,
+        "Y_FWD": 5,
+        "Y_BWD": 13,
     }
 
     for pin in PINS.values():
