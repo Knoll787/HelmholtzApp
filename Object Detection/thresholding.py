@@ -2,6 +2,8 @@ import cv2
 from picamera2 import Picamera2
 from libcamera import Transform
 
+import numpy as np
+
 # ---------------- Camera Abstraction ----------------
 class CameraBase:
     def read(self):
@@ -49,9 +51,30 @@ def track_magnet(frame, min_area=500):
     mask = cv2.inRange(hsv, lower_black, upper_black)
 
     # Morphological cleanup
-    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
+    
+
+    # floodfill background on inverted mask, then invert back and OR to fill holes
+    im_inv = cv2.bitwise_not(mask)
+    h, w = im_inv.shape[:2]
+    im_floodfill = im_inv.copy()
+    mask_ff = np.zeros((h + 2, w + 2), np.uint8)  # required size for floodFill
+    cv2.floodFill(im_floodfill, mask_ff, (0, 0), 255)
+    im_floodfill_inv = cv2.bitwise_not(im_floodfill)
+    mask_filled = cv2.bitwise_or(mask, im_floodfill_inv)
+    
+
+    # 4) find contours and reject small blobs
+    min_area=500
+    contours, _ = cv2.findContours(mask_filled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    valid_contours = [c for c in contours if cv2.contourArea(c) >= min_area]
+
+    if not valid_contours:
+        debug_dict.update({"found": False, "reason": "no_valid_contours", "n_contours": len(contours)})
+        return None, debug_dict, mask_filled
 
     # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
