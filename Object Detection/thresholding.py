@@ -37,11 +37,14 @@ class PiCamera(CameraBase):
         return w, h
 
 # ---------------- ROI Selection ----------------
-roi_points = []
+roi_points = [(101,95), (424,87), (431,415), (105,422)]  # default points for quick testing
 roi_mask = None
+#roi_points = []  # default points for quick testing
+#roi_mask = None
 
 def mouse_callback(event, x, y, flags, param):
     global roi_points, roi_mask
+    """ Enable manual ROI selection by clicking 4 points in the displayed frame.
     if event == cv2.EVENT_LBUTTONDOWN:
         if len(roi_points) < 4:
             roi_points.append((x, y))
@@ -53,6 +56,15 @@ def mouse_callback(event, x, y, flags, param):
             cv2.fillPoly(mask, [np.array(roi_points, dtype=np.int32)], 255)
             roi_mask = mask
             print("ROI set. Closing ROI selection window...")
+            print(roi_points)
+        """
+    # Create polygon mask with the same shape as the passed param frame
+    h, w = param.shape[:2]
+    mask = np.zeros((h, w), dtype=np.uint8)
+    cv2.fillPoly(mask, [np.array(roi_points, dtype=np.int32)], 255)
+    roi_mask = mask
+    print("ROI set. Closing ROI selection window...")
+    print(roi_points)
 
 # ---------------- Magnet tracking (centroid-of-white-object) ----------------
 def track_magnet(frame,
@@ -154,9 +166,6 @@ if not ret:
 cv2.namedWindow("ROI Selection")
 cv2.setMouseCallback("ROI Selection", mouse_callback, param=first_frame)
 
-print("Click 4 corners (in clockwise or counterclockwise order) of the workspace polygon.")
-print("After the 4th click, ROI selection window will close and tracking will start.")
-
 # ROI selection loop
 while roi_mask is None:
     ret, frame = camera.read()
@@ -165,7 +174,7 @@ while roi_mask is None:
     tmp = frame.copy()
     # draw current points for guidance
     for p in roi_points:
-        cv2.circle(tmp, p, 6, (0, 0, 255), -1)
+        cv2.circle(tmp, p, 2, (255, 0, 127), -1)
     if len(roi_points) >= 2:
         cv2.polylines(tmp, [np.array(roi_points, dtype=np.int32)], isClosed=False, color=(0,255,255), thickness=1)
     cv2.imshow("ROI Selection", tmp)
