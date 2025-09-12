@@ -41,7 +41,6 @@ roi_points = [(101,95), (424,87), (431,415), (105,422)]  # default points for qu
 roi_mask = None
 #roi_points = []  # default points for quick testing
 #roi_mask = None
-test = None
 
 def mouse_callback(event, x, y, flags, param):
     global roi_points, roi_mask
