@@ -1,6 +1,6 @@
-import image_processing 
+import image_processing as ip 
 
-camera = image_processing.PiCamera()
+camera = ip.PiCamera()
 ret, first_frame = camera.read()
 if not ret:
     raise RuntimeError("Could not read first frame from PiCamera")
@@ -11,12 +11,15 @@ try:
         if not ret:
             break
 
-        image_processing.cv2.imshow("Camera Feed", frame)
+        comp_mask = ip.mask(frame, roi_points=[(101,95), (424,87), (431,415), (105,422)])
+        ip.cv2.imshow("Camera Feed", frame)
+        ip.cv2.imshow("Masking Feed", comp_mask)
+
 
         # Exit on ESC
-        if image_processing.cv2.waitKey(10) & 0xFF == 27:
+        if ip.cv2.waitKey(10) & 0xFF == 27:
             break
 finally:
     camera.release()
-    image_processing.cv2.destroyAllWindows()
+    ip.cv2.destroyAllWindows()
     print("Exited cleanly.")
