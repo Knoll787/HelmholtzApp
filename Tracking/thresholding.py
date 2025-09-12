@@ -84,8 +84,6 @@ def track_magnet(frame,
     # 2) Restrict to ROI if provided
     if roi_mask is not None:
         mask = cv2.bitwise_and(mask, roi_mask)
-    global test
-    test = mask.copy()
 
     # 3) Morphological cleanup
     kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
