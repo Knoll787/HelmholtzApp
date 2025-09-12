@@ -41,6 +41,7 @@ roi_points = [(101,95), (424,87), (431,415), (105,422)]  # default points for qu
 roi_mask = None
 #roi_points = []  # default points for quick testing
 #roi_mask = None
+test = None
 
 def mouse_callback(event, x, y, flags, param):
     global roi_points, roi_mask
@@ -81,10 +82,11 @@ def track_magnet(frame,
     # 1) HSV threshold for dark/black
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower_black), np.array(upper_black))
-
     # 2) Restrict to ROI if provided
     if roi_mask is not None:
         mask = cv2.bitwise_and(mask, roi_mask)
+    global test
+    test = mask.copy()
 
     # 3) Morphological cleanup
     kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
@@ -92,6 +94,8 @@ def track_magnet(frame,
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
 
+    test = mask.copy()
+    """
     # 4) Fill holes so interior becomes continuous
     if hole_fill:
         im_inv = cv2.bitwise_not(mask)
@@ -101,6 +105,7 @@ def track_magnet(frame,
         cv2.floodFill(im_floodfill, mask_ff, (0, 0), 255)
         im_floodfill_inv = cv2.bitwise_not(im_floodfill)
         mask = cv2.bitwise_or(mask, im_floodfill_inv)
+    """
 
     # 5) Find contours and keep only sufficiently large ones
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -176,7 +181,7 @@ while roi_mask is None:
     for p in roi_points:
         cv2.circle(tmp, p, 2, (255, 0, 127), -1)
     if len(roi_points) >= 2:
-        cv2.polylines(tmp, [np.array(roi_points, dtype=np.int32)], isClosed=False, color=(0,255,255), thickness=1)
+        cv2.polylines(tmp, [np.array(roi_points, dtype=np.int32)], isClosed=True, color=(0,0,0), thickness=1)
     cv2.imshow("ROI Selection", tmp)
     if cv2.waitKey(10) & 0xFF == 27:
         print("ROI selection cancelled by user. Exiting.")
@@ -206,7 +211,8 @@ try:
                                              hole_fill=True)
 
         # draw the white object mask (resized view if needed)
-        cv2.imshow("Component Mask (white object)", comp_mask)
+        cv2.imshow("Test Output", test)
+        #cv2.imshow("Component Mask (white object)", comp_mask)
 
         if measurement is not None:
             mx, my = measurement
@@ -232,7 +238,7 @@ try:
 
         # draw Kalman-smoothed/predicted position in blue
         cv2.circle(frame, (px, py), 6, (255, 0, 0), 2)
-        cv2.putText(frame, f"Filtered: ({px},{py})", (10, frame.shape[0]-10),
+        cv2.putText(frame, f"Filtered: ({px},{py})", (frame.shape[0]-10, 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
 
         # show ROI overlay
