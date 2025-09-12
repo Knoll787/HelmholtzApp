@@ -1,4 +1,5 @@
 import image_processing as ip 
+import movement as mv
 
 camera = ip.PiCamera()
 ret, first_frame = camera.read()
@@ -13,9 +14,6 @@ try:
 
         comp_mask = ip.mask(frame, roi_points=[(101,95), (424,87), (431,415), (105,422)])
         ip.cv2.imshow("Camera Feed", frame)
-        ip.cv2.imshow("Masking Feed", comp_mask)
-        print(ip.track(comp_mask, min_area=500))
-
 
         # Exit on ESC
         if ip.cv2.waitKey(10) & 0xFF == 27:
