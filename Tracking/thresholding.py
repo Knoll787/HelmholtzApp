@@ -91,7 +91,6 @@ def track_magnet(frame,
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
 
-    test = mask.copy()
     """
     # 4) Fill holes so interior becomes continuous
     if hole_fill:
