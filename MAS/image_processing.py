@@ -85,3 +85,10 @@ def track(mask, min_area):
         centroid = (cx, cy)
 
     return centroid
+
+def calculate_error(agent_pos, point):
+    x_error = agent_pos[0] - point[0]
+    y_error = agent_pos[1] - point[1]
+    abs_error = (x_error**2 + y_error**2)**0.5 
+    
+    return (x_error, y_error, abs_error)
