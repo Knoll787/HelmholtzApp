@@ -1,16 +1,6 @@
 import cv2
-import sdl2
-import sdl2.ext
-import sys
-
-# Try Pi-only imports
-try:
-    from picamera2 import Picamera2
-    from libcamera import Transform
-    import RPi.GPIO as GPIO
-    ON_PI = True
-except ImportError:
-    ON_PI = False
+from picamera2 import Picamera2
+from libcamera import Transform
 
 # ---------------- Camera Abstraction ----------------
 class CameraBase:
@@ -21,20 +11,6 @@ class CameraBase:
     def get_frame_size(self):
         raise NotImplementedError
 
-class MacCamera(CameraBase):
-    def __init__(self):
-        self.cap = cv2.VideoCapture(0)
-        if not self.cap.isOpened():
-            raise RuntimeError("Could not open camera")
-    def read(self):
-        return self.cap.read()
-    def release(self):
-        self.cap.release()
-    def get_frame_size(self):
-        w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-        h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        return w, h
-
 class PiCamera(CameraBase):
     def __init__(self):
         self.picam2 = Picamera2()
@@ -43,7 +19,7 @@ class PiCamera(CameraBase):
                 main={"format": "BGR888", "size": (640, 640)}
             )
         )
-        transform=Transform(vflip=1)
+        transform = Transform(vflip=1)
         self.picam2.start()
 
     def read(self):
@@ -59,20 +35,69 @@ class PiCamera(CameraBase):
         h, w = frame.shape[:2]
         return w, h
 
+# ---------------- Magnet Tracking ----------------
+def track_magnet(frame, min_area=500):
+    """
+    Detect the magnet and return its centroid + mask.
+    Rejects blobs smaller than min_area.
+    """
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Threshold for dark/black regions
+    lower_black = (0, 0, 0)
+    upper_black = (180, 255, 98)
+    mask = cv2.inRange(hsv, lower_black, upper_black)
+
+    # Morphological cleanup
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
+        return None, mask
+
+    # Filter contours by area
+    contours = [c for c in contours if cv2.contourArea(c) >= min_area]
+    if not contours:
+        return None, mask
+
+    # Largest valid contour = magnet
+    c = max(contours, key=cv2.contourArea)
+    M = cv2.moments(c)
+    if M["m00"] == 0:
+        return None, mask
+    cx = int(M["m10"] / M["m00"])
+    cy = int(M["m01"] / M["m00"])
+    return (cx, cy), mask
+
 # ---------------- Select Camera ----------------
-camera = PiCamera() if ON_PI else MacCamera()
+camera = PiCamera()
 frame_width, frame_height = camera.get_frame_size()
 
-# ---------------- Event Polling ----------------
+# ---------------- Main Loop ----------------
 try:
     while True:
         ret, frame = camera.read()
         if not ret:
             break
-        cv2.imshow("Camera + Drawing + Magnetic Control", frame)
+
+        # Track magnet
+        (mx, my), mask = track_magnet(frame, min_area=200)
+
+        if (mx, my) is not None:
+            cv2.circle(frame, (mx, my), 8, (255, 0, 0), 2)
+            cv2.putText(frame, f"Magnet: ({mx},{my})", (mx+10, my),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+
+        # Show both original frame and threshold mask
+        cv2.imshow("Magnet Tracking", frame)
+        cv2.imshow("Threshold Mask", mask)
+
         if cv2.waitKey(10) & 0xFF == 27:  # ESC
             break
 finally:
     camera.release()
     cv2.destroyAllWindows()
-    print()  # move cursor to next line after logging
+    print()
