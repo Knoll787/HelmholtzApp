@@ -1,8 +1,7 @@
 import cv2
+import numpy as np
 from picamera2 import Picamera2
 from libcamera import Transform
-
-import numpy as np
 
 # ---------------- Camera Abstraction ----------------
 class CameraBase:
@@ -37,90 +36,132 @@ class PiCamera(CameraBase):
         h, w = frame.shape[:2]
         return w, h
 
-# ---------------- Magnet Tracking ----------------
-def track_magnet(frame, min_area=500):
-    """
-    Detect the magnet and return its centroid + mask.
-    Rejects blobs smaller than min_area.
-    """
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+# ---------------- ROI Selection ----------------
+roi_points = []
+roi_mask = None
 
-    # Threshold for dark/black regions
-    lower_black = (0, 0, 0)
-    upper_black = (180, 255, 98)
-    mask = cv2.inRange(hsv, lower_black, upper_black)
+def mouse_callback(event, x, y, flags, param):
+    global roi_points, roi_mask
+    if event == cv2.EVENT_LBUTTONDOWN:
+        roi_points.append((x, y))
+        if len(roi_points) == 4:
+            # Create polygon mask
+            mask = np.zeros(param.shape[:2], dtype=np.uint8)
+            cv2.fillPoly(mask, [np.array(roi_points, dtype=np.int32)], 255)
+            roi_mask = mask
+            print("ROI set. Press any key to continue.")
+
+# ---------------- Magnet Tracking ----------------
+def track_magnet(frame,
+                 lower_black=(0, 0, 0),
+                 upper_black=(180, 255, 95),
+                 min_area=500,
+                 hole_fill=True):
+    """Detect magnet and return its centroid or None, plus mask."""
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, np.array(lower_black), np.array(upper_black))
+
+    # Restrict to ROI
+    global roi_mask
+    if roi_mask is not None:
+        mask = cv2.bitwise_and(mask, roi_mask)
 
     # Morphological cleanup
     kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
     mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close)
-    
 
-    # floodfill background on inverted mask, then invert back and OR to fill holes
-    im_inv = cv2.bitwise_not(mask)
-    h, w = im_inv.shape[:2]
-    im_floodfill = im_inv.copy()
-    mask_ff = np.zeros((h + 2, w + 2), np.uint8)  # required size for floodFill
-    cv2.floodFill(im_floodfill, mask_ff, (0, 0), 255)
-    im_floodfill_inv = cv2.bitwise_not(im_floodfill)
-    mask_filled = cv2.bitwise_or(mask, im_floodfill_inv)
-    
+    # Fill holes
+    if hole_fill:
+        im_inv = cv2.bitwise_not(mask)
+        h, w = im_inv.shape[:2]
+        im_floodfill = im_inv.copy()
+        mask_ff = np.zeros((h + 2, w + 2), np.uint8)
+        cv2.floodFill(im_floodfill, mask_ff, (0, 0), 255)
+        im_floodfill_inv = cv2.bitwise_not(im_floodfill)
+        mask = cv2.bitwise_or(mask, im_floodfill_inv)
 
-    # 4) find contours and reject small blobs
-    min_area=500
-    contours, _ = cv2.findContours(mask_filled, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    valid_contours = [c for c in contours if cv2.contourArea(c) >= min_area]
-
-    if not valid_contours:
-        debug_dict.update({"found": False, "reason": "no_valid_contours", "n_contours": len(contours)})
-        return None, debug_dict, mask_filled
-
-    # Find contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not contours:
-        return None, mask
-
-    # Filter contours by area
     contours = [c for c in contours if cv2.contourArea(c) >= min_area]
     if not contours:
         return None, mask
 
-    # Largest valid contour = magnet
     c = max(contours, key=cv2.contourArea)
-    M = cv2.moments(c)
-    if M["m00"] == 0:
-        return None, mask
-    cx = int(M["m10"] / M["m00"])
-    cy = int(M["m01"] / M["m00"])
-    return (cx, cy), mask
+    # Distance transform for robust center
+    mask_dt = (mask > 0).astype(np.uint8) * 255
+    dt = cv2.distanceTransform(mask_dt, cv2.DIST_L2, 5)
+    _, _, _, maxLoc = cv2.minMaxLoc(dt)
+    return (int(maxLoc[0]), int(maxLoc[1])), mask
 
-# ---------------- Select Camera ----------------
+# ---------------- Kalman Filter ----------------
+def create_kalman():
+    kf = cv2.KalmanFilter(4, 2)
+    kf.transitionMatrix = np.array([[1, 0, 1, 0],
+                                     [0, 1, 0, 1],
+                                     [0, 0, 1, 0],
+                                     [0, 0, 0, 1]], np.float32)
+    kf.measurementMatrix = np.array([[1, 0, 0, 0],
+                                      [0, 1, 0, 0]], np.float32)
+    kf.processNoiseCov = np.eye(4, dtype=np.float32) * 1e-2
+    kf.measurementNoiseCov = np.eye(2, dtype=np.float32) * 1e-1
+    kf.errorCovPost = np.eye(4, dtype=np.float32)
+    return kf
+
+kalman = create_kalman()
+initialized = False
+
+# ---------------- Main ----------------
 camera = PiCamera()
-frame_width, frame_height = camera.get_frame_size()
+ret, frame = camera.read()
+cv2.namedWindow("ROI Selection")
+cv2.setMouseCallback("ROI Selection", mouse_callback, param=frame)
 
-# ---------------- Main Loop ----------------
+print("Click 4 points to define ROI...")
+
+# ROI selection loop
+while roi_mask is None:
+    ret, frame = camera.read()
+    if not ret:
+        break
+    temp = frame.copy()
+    for pt in roi_points:
+        cv2.circle(temp, pt, 5, (0, 0, 255), -1)
+    cv2.imshow("ROI Selection", temp)
+    if cv2.waitKey(10) & 0xFF == 27:  # ESC to quit
+        break
+
+cv2.destroyWindow("ROI Selection")
+
+# Main tracking loop
 try:
     while True:
         ret, frame = camera.read()
         if not ret:
             break
 
-        # Track magnet
-        (mx, my), mask = track_magnet(frame, min_area=200)
+        measurement, mask = track_magnet(frame)
 
-        if (mx, my) is not None:
-            cv2.circle(frame, (mx, my), 8, (255, 0, 0), 2)
-            cv2.putText(frame, f"Magnet: ({mx},{my})", (mx+10, my),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+        if measurement is not None:
+            mx, my = measurement
+            meas = np.array([[np.float32(mx)], [np.float32(my)]])
+            if not initialized:
+                kalman.statePost = np.array([[mx], [my], [0], [0]], np.float32)
+                initialized = True
+            prediction = kalman.correct(meas)
+        else:
+            prediction = kalman.predict()
 
-        # Show both original frame and threshold mask
+        px, py = int(prediction[0]), int(prediction[1])
+        cv2.circle(frame, (px, py), 8, (255, 0, 0), 2)
+        cv2.putText(frame, f"Tracked: ({px},{py})", (px+10, py),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,0,0), 1)
+
         cv2.imshow("Magnet Tracking", frame)
         cv2.imshow("Threshold Mask", mask)
 
-        if cv2.waitKey(10) & 0xFF == 27:  # ESC
+        if cv2.waitKey(10) & 0xFF == 27:
             break
 finally:
     camera.release()
     cv2.destroyAllWindows()
-    print()
