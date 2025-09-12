@@ -1,22 +1,22 @@
-import camera
+import image_processing 
 
-cam = camera.PiCamera()
-ret, first_frame = cam.read()
+camera = image_processing.PiCamera()
+ret, first_frame = camera.read()
 if not ret:
     raise RuntimeError("Could not read first frame from PiCamera")
 
 try:
     while True:
-        ret, frame = cam.read()
+        ret, frame = camera.read()
         if not ret:
             break
 
-        cv2.imshow("Camera Feed", frame)
+        image_processing.cv2.imshow("Camera Feed", frame)
 
         # Exit on ESC
-        if cv2.waitKey(10) & 0xFF == 27:
+        if image_processing.cv2.waitKey(10) & 0xFF == 27:
             break
 finally:
-    cam.release()
-    cv2.destroyAllWindows()
+    camera.release()
+    image_processing.cv2.destroyAllWindows()
     print("Exited cleanly.")
