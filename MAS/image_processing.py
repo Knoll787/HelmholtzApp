@@ -1,6 +1,7 @@
 import cv2
 from picamera2 import Picamera2
 from libcamera import Transform
+import numpy as np
 
 class CameraBase:
     def read(self):
@@ -33,24 +34,33 @@ class PiCamera(CameraBase):
         frame = self.picam2.capture_array()
         h, w = frame.shape[:2]
         return w, h
+
+
+# Creates the mask that will be used to calculate the position of the agent 
+def mask(frame, roi_points):
+    # Masking - Region of Interest (ROI)
+    roi_points = [(101,95), (424,87), (431,415), (105,422)]  # Region of interest points 
+    h, w = frame.shape[:2]
+    mask = np.zeros((h, w), dtype=np.uint8)
+    cv2.fillPoly(mask, [np.array(roi_points, dtype=np.int32)], 255)
+    roi_mask = mask
     
-camera = PiCamera()
-ret, first_frame = camera.read()
-if not ret:
-    raise RuntimeError("Could not read first frame from PiCamera")
-
-try:
-    while True:
-        ret, frame = camera.read()
-        if not ret:
-            break
-
-        cv2.imshow("Camera Feed", frame)
-
-        # Exit on ESC
-        if cv2.waitKey(10) & 0xFF == 27:
-            break
-finally:
-    camera.release()
-    cv2.destroyAllWindows()
-    print("Exited cleanly.")
+    # Masking - Thresholding
+    lower_black = (0, 0, 0)
+    upper_black = (180, 255, 95)
+    min_area = 500
+    hole_fill = True
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    mask = cv2.inRange(hsv, np.array(lower_black), np.array(upper_black))
+    
+    # Masking - Combine ROI and Thresholding
+    if roi_mask is not None:
+        mask = cv2.bitwise_and(mask, roi_mask)
+        
+    # Masking - Morphological cleanup
+    kernel_open = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+    kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel_open)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close) 
+    
+    return mask
