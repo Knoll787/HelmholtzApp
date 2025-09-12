@@ -64,3 +64,24 @@ def mask(frame, roi_points):
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close) 
     
     return mask
+
+def track(mask, min_area):
+    # Find contours
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    valid = [c for c in contours if cv2.contourArea(c) >= min_area]
+    if not valid:
+        return None, mask
+    
+    # Determine the largest contour
+    c = max(valid, key=cv2.contourArea)
+    area = cv2.contourArea(c)
+    
+    # Calculate centroid
+    M = cv2.moments(mask)
+    centroid = None
+    if M["m00"] != 0:
+        cx = int(round(M["m10"] / M["m00"]))
+        cy = int(round(M["m01"] / M["m00"]))
+        centroid = (cx, cy)
+
+    return centroid
