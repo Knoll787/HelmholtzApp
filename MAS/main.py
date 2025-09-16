@@ -10,9 +10,10 @@ if not ret:
 try:
     x = mv.Coil(FWD=17, BWD=27) 
     y = mv.Coil(FWD=13, BWD=5) 
+    target = (142, 137)  # Target position in pixels (x, y)
     
-    ctl_x = ctlr.PID(kp=0.10, ki=0.01, kd=0.00, setpoint=142, output_limits=(-50, 50))
-    ctl_y = ctlr.PID(kp=0.10, ki=0.01, kd=0.00, setpoint=137, output_limits=(-50, 50))
+    ctl_x = ctlr.PID(kp=0.10, ki=0.01, kd=0.00, setpoint=target[0], output_limits=(-50, 50))
+    ctl_y = ctlr.PID(kp=0.10, ki=0.01, kd=0.00, setpoint=target[1], output_limits=(-50, 50))
     while True:
         ret, frame = camera.read()
         if not ret:
