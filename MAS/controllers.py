@@ -43,5 +43,11 @@ class PID:
             output = max(low, output)
         if high is not None:
             output = min(high, output)
+            
+        log = {
+            'pos': p,
+            'error': i,
+            'out': output 
+        }
         
-        return output
+        return output, log
