@@ -1,9 +1,10 @@
 import sdl2
 import sys
 import RPi.GPIO as GPIO
+import time
 
 
-class Controller:
+class Gamepad:
     def __init__(self):
         sdl2.SDL_Init(sdl2.SDL_INIT_JOYSTICK)
         if sdl2.SDL_NumJoysticks() < 1:
@@ -135,3 +136,4 @@ class Controller:
         for pwm in [self.pwm_x_fwd, self.pwm_x_bwd, self.pwm_y_fwd, self.pwm_y_bwd]:
             pwm.stop()
         GPIO.cleanup()
+        
