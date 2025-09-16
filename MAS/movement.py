@@ -136,4 +136,37 @@ class Gamepad:
         for pwm in [self.pwm_x_fwd, self.pwm_x_bwd, self.pwm_y_fwd, self.pwm_y_bwd]:
             pwm.stop()
         GPIO.cleanup()
+
+class Coil:
+    def __init__(self, FWD, BWD): # When gradients aren't working
+        # H-bridge pins: forward/backward for each axis
+        self.FWD = FWD # Positive Direction
+        self.BWD = BWD# Nagative Direction
+    
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setwarnings(False)
+
+        GPIO.setup(self.FWD, GPIO.OUT)
+        GPIO.setup(self.BWD, GPIO.OUT)
+
+        self.pwm_fwd = GPIO.PWM(self.FWD, 1000)
+        self.pwm_bwd = GPIO.PWM(self.BWD, 1000)
+
+        for pwm in [self.pwm_fwd, self.pwm_bwd]:
+            pwm.start(0)
+
+    def cleanup(self):
+        for pwm in [self.pwm_fwd, self.pwm_bwd]:
+            pwm.stop()
+        GPIO.cleanup()
         
+    def set_magnetic_field(self, ctl_input):
+        if ctl_input > 0:
+            self.pwm_fwd.ChangeDutyCycle(ctl_input)
+            self.pwm_bwd.ChangeDutyCycle(0)
+        elif ctl_input < 0:
+            self.pwm_fwd.ChangeDutyCycle(0)
+            self.pwm_bwd.ChangeDutyCycle(abs(ctl_input))
+        else:
+            self.pwm_fwd.ChangeDutyCycle(0)
+            self.pwm_bwd.ChangeDutyCycle(0)
