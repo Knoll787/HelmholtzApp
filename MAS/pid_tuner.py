@@ -1,20 +1,3 @@
-#!/usr/bin/env python3
-"""
-PID Tuner GUI for Raspberry Pi
-- PyQt5 GUI
-- Live camera feed via picamera2
-- Run a test (placeholder control loop) that collects x/y error over time
-- After the run: show matplotlib plot of x and y error vs time and compute rise time, overshoot,
-  settling time and steady-state error.
-
-NOTE: This code includes a simulated plant/measurement by default. Replace `apply_control_and_measure`
-with your hardware integration (actuator output + measurement via sensors/camera) for real tests.
-
-Dependencies:
-  sudo apt install python3-pyqt5 python3-pip
-  pip3 install picamera2 numpy matplotlib
-"""
-
 import sys
 import time
 import threading
