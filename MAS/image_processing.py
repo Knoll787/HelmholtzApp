@@ -70,7 +70,7 @@ def track(mask, min_area):
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     valid = [c for c in contours if cv2.contourArea(c) >= min_area]
     if not valid:
-        return None, mask
+        return None
     
     # Determine the largest contour
     c = max(valid, key=cv2.contourArea)
