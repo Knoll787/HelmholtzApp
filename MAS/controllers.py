@@ -1,9 +1,11 @@
 import time
 
 class PID:
-    def __init__(self, kp, ki, kd, 
+    def __init__(self, axis, 
+                 kp, ki, kd, 
                  setpoint=0, 
                  output_limits=(None, None)):
+        self.axis=axis
         self.kp = kp
         self.ki = ki
         self.kd = kd
@@ -43,5 +45,13 @@ class PID:
             output = max(low, output)
         if high is not None:
             output = min(high, output)
-            
+
+        self.log(self.axis, time=now, pos=measurement, 
+            ctrl_out=output, error=error, 
+            kp=self.kp, ki=self.ki, kd=self.kd) 
         return output
+    
+    def log(self, axis, time, pos, ctrl_out, error, kp, ki, kd):
+        with open("../data/test.csv", "a", buffering=1, encoding="utf-8") as f:
+            data = f"{time},{axis},{pos},{self.setpoint},{ctrl_out},{error},{kp},{ki},{kd}\n"
+            f.write(data)

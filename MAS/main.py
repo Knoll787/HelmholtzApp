@@ -17,7 +17,8 @@ try:
     y = mv.Coil(FWD=13, BWD=5) 
     
     # Simulation Configuration
-    target = (142, 137)  # Target position in pixels (x, y)
+    target = (263, 95)  # Test Position x axis 
+    #target = (127, 253)  # Test Position y axis 
     ctl_x = ctlr.PID("x", kp=0.10, ki=0.01, kd=0.00, setpoint=target[0], output_limits=(-50, 50))
     ctl_y = ctlr.PID("y", kp=0.10, ki=0.01, kd=0.00, setpoint=target[1], output_limits=(-50, 50))
     
@@ -29,7 +30,6 @@ try:
 
         comp_mask = ip.mask(frame, roi_points=[(101,95), (424,87), (431,415), (105,422)])
         pos = ip.track(comp_mask, min_area=500)
-        print("This sucks:", pos)
         if pos is None:
             print("Warning: No valid object found. Skipping frame.")
             continue 
@@ -43,6 +43,7 @@ try:
         ip.cv2.circle(frame, (target[0], target[1]), radius=5, color=(0, 0, 255), thickness=1)
         ip.cv2.circle(frame, (pos[0], pos[1]), radius=5, color=(255, 0, 0), thickness=1)
         ip.cv2.imshow("Camera Feed", frame)
+        #ip.cv2.imshow("Camera Feed", comp_mask)
 
         # Exit on ESC
         if ip.cv2.waitKey(10) & 0xFF == 27:
