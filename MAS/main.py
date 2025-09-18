@@ -27,8 +27,10 @@ try:
 
         comp_mask = ip.mask(frame, roi_points=[(101,95), (424,87), (431,415), (105,422)])
         pos = ip.track(comp_mask, min_area=500)
-        x.set_magnetic_field(ctl_x.compute(pos[0])) 
-        y.set_magnetic_field(ctl_y.compute(pos[1])) 
+        pid_x_out = ctl_x.compute(pos[0])
+        pid_y_out = ctl_y.compute(pos[1])
+        x.set_magnetic_field(pid_x_out) 
+        y.set_magnetic_field(pid_y_out) 
 
         ip.cv2.circle(frame, (target[0], target[1]), radius=5, color=(0, 0, 255), thickness=1)
         ip.cv2.circle(frame, pos, radius=5, color=(255, 0, 0), thickness=1)
