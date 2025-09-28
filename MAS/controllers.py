@@ -51,6 +51,23 @@ class PID:
             kp=self.kp, ki=self.ki, kd=self.kd) 
         return output
     
+
+    def step(self, measurement):
+        now = time.time()
+        if self._last_time is None:
+            self._last_time = now
+            return 0
+        dt = now - self._last_time
+        output = 0
+        error=0
+
+        
+        self.log(self.axis, time=now, pos=measurement, 
+            ctrl_out=output, error=error, 
+            kp=self.kp, ki=self.ki, kd=self.kd) 
+        return -100 
+        
+    
     def log(self, axis, time, pos, ctrl_out, error, kp, ki, kd):
         with open("../data/test.csv", "a", buffering=1, encoding="utf-8") as f:
             data = f"{time},{axis},{pos},{self.setpoint},{ctrl_out},{error},{kp},{ki},{kd}\n"
