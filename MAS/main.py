@@ -17,10 +17,10 @@ try:
     y = mv.Coil(FWD=13, BWD=5) 
     
     # Simulation Configuration
-    target = (263, 95)  # Test Position x axis 
-    #target = (127, 253)  # Test Position y axis 
-    ctl_x = ctlr.PID("x", kp=0.10, ki=0.01, kd=0.00, setpoint=target[0], output_limits=(-50, 50))
-    ctl_y = ctlr.PID("y", kp=0.10, ki=0.01, kd=0.00, setpoint=target[1], output_limits=(-50, 50))
+    #target = (263, 95)  # Test Position x axis 
+    target = (127, 253)  # Test Position y axis 
+    ctl_x = ctlr.PID("x", kp=1.00, ki=0.10, kd=0.00, setpoint=target[0], output_limits=(-100, 100))
+    ctl_y = ctlr.PID("y", kp=1.00, ki=0.10, kd=0.00, setpoint=target[1], output_limits=(-100, 100))
     
 
     while True:
@@ -35,9 +35,12 @@ try:
             continue 
 
         
-        pid_x_out = ctl_x.compute(pos[0])
-        pid_y_out = ctl_y.compute(pos[1])
-        x.set_magnetic_field(pid_x_out) 
+        #pid_x_out = ctl_x.compute(pos[0])
+        #pid_y_out = ctl_y.compute(pos[1])
+        #pid_x_out = ctl_x.step(pos[0])
+        pid_y_out = ctl_y.step(pos[1])
+
+        #x.set_magnetic_field(pid_x_out) 
         y.set_magnetic_field(pid_y_out) 
 
         ip.cv2.circle(frame, (target[0], target[1]), radius=5, color=(0, 0, 255), thickness=1)
