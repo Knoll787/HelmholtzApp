@@ -30,7 +30,7 @@ class ScriptLauncher(QWidget):
         self.scripts = [
             ("Coil Control", "Manually set the current and direction of each coil", "tests/coil_control.py"),
             ("Open Loop", "Manipulate objects within the workspace using a controller", "tests/open_loop.py"),
-            ("Closed-loop", "Full access to the closed loop control scheme", "script4.py"),
+            ("Closed-loop", "Full access to the closed loop control scheme", "closed_loop.py"),
             ("Debug", "Closed Loop control with pre-set parameters e.g. ROI ", "script3.py"),
         ]
 

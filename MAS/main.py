@@ -12,7 +12,6 @@ if not ret:
     raise RuntimeError("Could not read first frame from PiCamera")
 
 try:
-
     x = mv.Coil(FWD=17, BWD=27) 
     y = mv.Coil(FWD=13, BWD=5) 
     

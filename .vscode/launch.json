@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch MAS main.py (headless)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/MAS/main.py",
+            "console": "integratedTerminal",
+            "env": {
+                "QT_QPA_PLATFORM": "offscreen"
+            },
+            "args": [
+                "--no-display"
+            ],
+            "justMyCode": true
+        }
+    ]
+}
