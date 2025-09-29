@@ -5,7 +5,7 @@ from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import (
     QApplication, QLabel, QMainWindow, QPushButton,
-    QVBoxLayout, QHBoxLayout, QWidget, QTextEdit
+    QVBoxLayout, QHBoxLayout, QWidget
 )
 
 import image_processing as ip
@@ -17,41 +17,57 @@ class CameraWidget(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # Window fixed to 500x500 as requested
         self.setWindowTitle("Tracking GUI")
-        self.resize(500, 500)
+        self.setFixedSize(500, 500)
 
-        # Camera
+        # Camera - read one frame to know resolution
         self.camera = ip.PiCamera()
         ret, first_frame = self.camera.read()
         if not ret:
             raise RuntimeError("Could not read first frame from PiCamera")
 
+        # Keep track of the actual frame size returned by the camera
+        self._frame_size = (first_frame.shape[1], first_frame.shape[0])  # (width, height)
+
         # ROI selection variables
         self.roi_points = []
         self.roi_mask = None
-        self.selecting_roi = True
 
-        # Target point
+        # Target point and modes
         self.target = None
+        self.select_target_mode = False
+        self.show_pos_cursor = True
 
         # --- Video feed as main focus ---
         self.video_label = QLabel()
         self.video_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.video_label.setStyleSheet("background-color: black;")
+        # Install click handler directly on the label
         self.video_label.mousePressEvent = self.on_mouse_click
 
         # --- Controls and info below video ---
         self.toggle_button = QPushButton("Show Mask")
         self.toggle_button.clicked.connect(self.toggle_view)
 
-        self.position_text = QTextEdit()
-        self.position_text.setReadOnly(True)
-        self.position_text.setFixedHeight(50)
+        self.toggle_target_button = QPushButton("Select Target")
+        self.toggle_target_button.setCheckable(True)
+        self.toggle_target_button.clicked.connect(self.toggle_target_mode)
+
+        self.cursor_button = QPushButton("Hide Cursor")
+        self.cursor_button.setCheckable(True)
+        self.cursor_button.clicked.connect(self.toggle_cursor)
+
+        self.position_label = QLabel("Position: -,-")
+        self.position_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.position_label.setFixedWidth(130)
 
         bottom_layout = QHBoxLayout()
         bottom_layout.addWidget(self.toggle_button)
-        bottom_layout.addWidget(QLabel("Position:"))
-        bottom_layout.addWidget(self.position_text)
+        bottom_layout.addWidget(self.toggle_target_button)
+        bottom_layout.addWidget(self.cursor_button)
+        bottom_layout.addStretch(1)
+        bottom_layout.addWidget(self.position_label)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.video_label, stretch=1)
@@ -66,9 +82,9 @@ class CameraWidget(QMainWindow):
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
 
-        # State
-        self.show_mask = False
-        self.pos = None
+        # State used for mapping clicks -> frame coords
+        self._pixmap_size = (0, 0)  # (width, height) in logical coordinates
+        self._label_size = (self.video_label.width(), self.video_label.height())
 
         # Movement + controllers
         self.x_coil = mv.Coil(FWD=17, BWD=27)
@@ -76,79 +92,159 @@ class CameraWidget(QMainWindow):
         self.ctl_x = None
         self.ctl_y = None
 
+    # --- UI control callbacks ---
     def toggle_view(self):
-        self.show_mask = not self.show_mask
+        self.show_mask = not getattr(self, 'show_mask', False)
         self.toggle_button.setText("Show Camera Feed" if self.show_mask else "Show Mask")
 
+    def toggle_target_mode(self):
+        self.select_target_mode = self.toggle_target_button.isChecked()
+        self.toggle_target_button.setText("Cancel Target Select" if self.select_target_mode else "Select Target")
+
+    def toggle_cursor(self):
+        # If checked -> cursor hidden
+        self.show_pos_cursor = not self.cursor_button.isChecked()
+        self.cursor_button.setText("Hide Cursor" if self.show_pos_cursor else "Show Cursor")
+
+    # --- Main loop ---
     def update_frame(self):
         ret, frame = self.camera.read()
         if not ret:
             return
 
+        # update known frame resolution in case camera changes
+        self._frame_size = (frame.shape[1], frame.shape[0])
+
+        display_frame = frame.copy()
+
         if self.roi_mask is None:
-            # ROI selection phase
-            tmp = frame.copy()
+            # Still selecting ROI
             for p in self.roi_points:
-                cv2.circle(tmp, p, 6, (0, 0, 255), -1)
+                cv2.circle(display_frame, p, 6, (0, 0, 255), -1)
             if len(self.roi_points) >= 2:
-                cv2.polylines(tmp, [np.array(self.roi_points, dtype=np.int32)], isClosed=False, color=(0, 255, 255), thickness=1)
-            self.display_frame(tmp)
+                cv2.polylines(display_frame, [np.array(self.roi_points, dtype=np.int32)], isClosed=False, color=(0, 255, 255), thickness=1)
+            self.display_frame(display_frame)
             return
 
-        # Once ROI is set, track
+        # ROI exists -> do mask + tracking
         comp_mask = ip.mask(frame, roi_points=self.roi_points)
-        self.pos = ip.track(comp_mask, min_area=500)
+        pos = ip.track(comp_mask, min_area=500)
+        self.pos = pos
 
-        if self.pos is not None:
+        if pos is not None:
             if self.target is not None:
-                cv2.circle(frame, self.target, radius=5, color=(0, 0, 255), thickness=2)
-            cv2.circle(frame, self.pos, radius=5, color=(255, 0, 0), thickness=2)
-            self.position_text.setText(f"x: {self.pos[0]}, y: {self.pos[1]}")
+                cv2.circle(display_frame, self.target, radius=6, color=(0, 0, 255), thickness=2)
+            if self.show_pos_cursor:
+                cv2.circle(display_frame, (int(pos[0]), int(pos[1])), radius=6, color=(255, 0, 0), thickness=2)
+            self.position_label.setText(f"Position: {pos[0]}, {pos[1]}")
         else:
-            self.position_text.setText("No object found")
+            self.position_label.setText("Position: None")
 
-        if self.show_mask:
+        if getattr(self, 'show_mask', False):
+            # show mask instead of camera
             self.display_frame(comp_mask, is_mask=True)
         else:
-            self.display_frame(frame)
+            self.display_frame(display_frame)
 
+    # --- Render to QLabel and keep mapping info ---
     def display_frame(self, frame, is_mask=False):
+        # frame: either BGR color (H,W,3) or single-channel mask (H,W)
         if is_mask:
-            qimg = QImage(frame.data, frame.shape[1], frame.shape[0], frame.strides[0], QImage.Format.Format_Grayscale8)
+            h, w = frame.shape[:2]
+            qimg = QImage(frame.data, w, h, frame.strides[0], QImage.Format.Format_Grayscale8)
         else:
-            rgb_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            qimg = QImage(rgb_image.data, rgb_image.shape[1], rgb_image.shape[0], rgb_image.strides[0], QImage.Format.Format_RGB888)
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w = rgb.shape[:2]
+            qimg = QImage(rgb.data, w, h, rgb.strides[0], QImage.Format.Format_RGB888)
 
-        self.video_label.setPixmap(QPixmap.fromImage(qimg).scaled(
-            self.video_label.width(), self.video_label.height(),
-            Qt.AspectRatioMode.KeepAspectRatio
-        ))
+        pixmap = QPixmap.fromImage(qimg)
 
+        label_w = self.video_label.width()
+        label_h = self.video_label.height()
+
+        # Scale pixmap to fit label while keeping aspect ratio
+        scaled_pixmap = pixmap.scaled(label_w, label_h, Qt.AspectRatioMode.KeepAspectRatio)
+
+        # Account for devicePixelRatio which can cause clicks to be offset on high-DPI displays
+        device_ratio = scaled_pixmap.devicePixelRatio()
+        logical_pix_w = int(scaled_pixmap.width() / device_ratio)
+        logical_pix_h = int(scaled_pixmap.height() / device_ratio)
+
+        # Store sizes used for mapping mouse clicks back to frame coordinates
+        self._pixmap_size = (logical_pix_w, logical_pix_h)
+        self._label_size = (label_w, label_h)
+        self._frame_size = (w, h)
+
+        self.video_label.setPixmap(scaled_pixmap)
+
+    # --- Click handling with correct mapping ---
     def on_mouse_click(self, event):
+        # event.pos() is in label-local logical coordinates
+        px = event.pos().x()
+        py = event.pos().y()
+
+        label_w, label_h = self._label_size
+        pixmap_w, pixmap_h = self._pixmap_size
+
+        # If we don't yet have a displayed pixmap, ignore the click
+        if pixmap_w == 0 or pixmap_h == 0:
+            return
+
+        # compute top-left origin of the pixmap inside the label (centred)
+        x_offset = (label_w - pixmap_w) // 2
+        y_offset = (label_h - pixmap_h) // 2
+
+        # coordinates inside the pixmap
+        x_in = px - x_offset
+        y_in = py - y_offset
+
+        # check bounds
+        if x_in < 0 or y_in < 0 or x_in >= pixmap_w or y_in >= pixmap_h:
+            return
+
+        frame_w, frame_h = self._frame_size
+
+        # map logical pixmap coords back to original frame coords
+        x_frame = int(x_in * frame_w / pixmap_w)
+        y_frame = int(y_in * frame_h / pixmap_h)
+
+        # clamp
+        x_frame = max(0, min(frame_w - 1, x_frame))
+        y_frame = max(0, min(frame_h - 1, y_frame))
+
         if self.roi_mask is None:
-            # Collect ROI points
+            # Collect ROI points in frame coordinates
             if len(self.roi_points) < 4:
-                self.roi_points.append((event.pos().x(), event.pos().y()))
+                self.roi_points.append((x_frame, y_frame))
+                print(f"ROI point {len(self.roi_points)} = {(x_frame, y_frame)}")
                 if len(self.roi_points) == 4:
-                    self.roi_mask = np.zeros((640, 640), dtype=np.uint8)
+                    # create mask same size as frame
+                    self.roi_mask = np.zeros((frame_h, frame_w), dtype=np.uint8)
                     cv2.fillPoly(self.roi_mask, [np.array(self.roi_points, dtype=np.int32)], 255)
                     print("ROI set.")
-        else:
-            # Set target point if within ROI
-            x, y = event.pos().x(), event.pos().y()
-            if 0 <= y < self.roi_mask.shape[0] and 0 <= x < self.roi_mask.shape[1] and self.roi_mask[y, x] > 0:
-                self.target = (x, y)
+        elif self.select_target_mode:
+            # Select target (only if click is inside ROI)
+            if self.roi_mask[y_frame, x_frame] > 0:
+                self.target = (x_frame, y_frame)
                 print(f"New target set: {self.target}")
-                if self.ctl_x is None or self.ctl_y is None:
-                    self.ctl_x = ctlr.PID("x", kp=1.00, ki=0.10, kd=0.00, setpoint=self.target[0], output_limits=(-100, 100))
-                    self.ctl_y = ctlr.PID("y", kp=1.00, ki=0.10, kd=0.00, setpoint=self.target[1], output_limits=(-100, 100))
+                # recreate controllers with new setpoint (safe and simple)
+                self.ctl_x = ctlr.PID("x", kp=1.00, ki=0.10, kd=0.00, setpoint=self.target[0], output_limits=(-100, 100))
+                self.ctl_y = ctlr.PID("y", kp=1.00, ki=0.10, kd=0.00, setpoint=self.target[1], output_limits=(-100, 100))
+                # optionally exit target selection mode automatically:
+                # self.toggle_target_button.setChecked(False); self.toggle_target_mode()
             else:
                 print("Click ignored: outside ROI")
 
     def closeEvent(self, event):
-        self.camera.release()
-        self.x_coil.cleanup()
-        self.y_coil.cleanup()
+        try:
+            self.camera.release()
+        except Exception:
+            pass
+        try:
+            self.x_coil.cleanup()
+            self.y_coil.cleanup()
+        except Exception:
+            pass
         event.accept()
 
 
