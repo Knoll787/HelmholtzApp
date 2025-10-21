@@ -45,8 +45,8 @@ def plot_response(time, pos, control, steady_state_value, metrics, axis="x"):
     ax.grid(True)
 
     # --- Legend (anchored to right) ---
-    legend = ax.legend(
-        bbox_to_anchor=(1.05, 1),   # place outside
+    """
+    legend = ax.legend( bbox_to_anchor=(1.05, 1),   # place outside
         loc="upper left",
         borderaxespad=0.,
         frameon=True
@@ -72,6 +72,7 @@ def plot_response(time, pos, control, steady_state_value, metrics, axis="x"):
 
     # --- Adjust layout so nothing overlaps ---
     plt.tight_layout(rect=[0, 0, 0.75, 1])
+    """
 
     plt.show()
 
@@ -103,7 +104,6 @@ def load_axis_data(file_path, axis="x"):
 
     return time, pos, control, steady_state_value
 
-"""
 # Load X-axis data
 time_x, pos_x, control_x, sp_x = load_axis_data("../data/test.csv", axis="x")
 time_y, pos_y, control_y, sp_y = load_axis_data("../data/test.csv", axis="y")
@@ -114,15 +114,15 @@ metrics_y = compute_performance(time_y, pos_y, control_y, sp_y)
 
 # Plot response
 plot_response(time_x, pos_x, control_x, sp_x, metrics_x, axis="x")
-plot_response(time_y, pos_y, control_y, sp_y, metrics_y, axis="y")
-"""
+#plot_response(time_y, pos_y, control_y, sp_y, metrics_y, axis="y")
 
+
+"""
 time_x6, pos_x6, control_x6, sp_x6 = load_axis_data("../data/openloop_x6_max.csv", axis="x")
 time_x5, pos_x5, control_x5, sp_x5 = load_axis_data("../data/openloop_x5_max.csv", axis="x")
 time_y4, pos_y4, control_y4, sp_y4 = load_axis_data("../data/openloop_y4_max.csv", axis="y")
 time_y3, pos_y3, control_y3, sp_y3 = load_axis_data("../data/openloop_y3_max.csv", axis="y")
 
-"""
 # Create a tiled layout with 2 rows, 1 column (stacked plots)
 fig, axs = plt.subplots(2, 1, figsize=(10, 6), sharex=True)
 
@@ -143,7 +143,6 @@ axs[1].grid(True)
 # Adjust layout so titles/labels don’t overlap
 plt.tight_layout()
 plt.show()
-"""
 fig, axs = plt.subplots(2, 2, figsize=(10, 6), sharex=True)
 fig.suptitle("Open Loop Step Response - Max Current")
 # Top-left: X data (line plot)
@@ -174,3 +173,4 @@ axs[1, 0].grid(True)
 # Adjust layout
 plt.tight_layout()
 plt.show()
+"""

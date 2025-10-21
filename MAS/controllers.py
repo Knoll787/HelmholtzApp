@@ -9,7 +9,7 @@ class PID:
         self.kp = kp
         self.ki = ki
         self.kd = kd
-        self.kaw = 20
+        #self.kaw = 10 
         self.setpoint = setpoint
         self.output_limits = output_limits
         

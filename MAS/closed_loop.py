@@ -17,9 +17,8 @@ class CameraWidget(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Window fixed to 500x500
         self.setWindowTitle("Tracking GUI")
-        self.setFixedSize(500, 500)
+        self.setFixedSize(700, 700)
 
         # Camera
         self.camera = ip.PiCamera()
@@ -54,16 +53,26 @@ class CameraWidget(QMainWindow):
         self.cursor_button.setCheckable(True)
         self.cursor_button.clicked.connect(self.toggle_cursor)
 
+        self.start_stop_button = QPushButton("Start")
+        self.start_stop_button.setCheckable(True)
+        self.start_stop_button.clicked.connect(self.toggle_start_stop)
+
         self.position_label = QLabel("Position: -,-")
         self.position_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.position_label.setFixedWidth(130)
+
+        self.error_label = QLabel("Error: -,-")
+        self.error_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.error_label.setFixedWidth(150)
 
         bottom_layout = QHBoxLayout()
         bottom_layout.addWidget(self.toggle_button)
         bottom_layout.addWidget(self.toggle_target_button)
         bottom_layout.addWidget(self.cursor_button)
+        bottom_layout.addWidget(self.start_stop_button)
         bottom_layout.addStretch(1)
         bottom_layout.addWidget(self.position_label)
+        bottom_layout.addWidget(self.error_label)
 
         main_layout = QVBoxLayout()
         main_layout.addWidget(self.video_label, stretch=1)
@@ -88,6 +97,9 @@ class CameraWidget(QMainWindow):
         self.ctl_x = None
         self.ctl_y = None
 
+        # Start/stop flag
+        self.running = False
+
     # --- UI control callbacks ---
     def toggle_view(self):
         self.show_mask = not getattr(self, 'show_mask', False)
@@ -100,6 +112,23 @@ class CameraWidget(QMainWindow):
     def toggle_cursor(self):
         self.show_pos_cursor = not self.cursor_button.isChecked()
         self.cursor_button.setText("Hide Cursor" if self.show_pos_cursor else "Show Cursor")
+
+    def toggle_start_stop(self):
+        self.running = self.start_stop_button.isChecked()
+        if self.running:
+            self.start_stop_button.setText("Stop")
+            print("Coils activated. Tracking started.")
+        else:
+            self.start_stop_button.setText("Start")
+            # Stop coils and reset target
+            self.ctl_x = None
+            self.ctl_y = None
+            self.target = None
+            self.position_label.setText("Position: -,-")
+            self.error_label.setText("Error: -,-")
+            self.x_coil.set_magnetic_field(0)
+            self.y_coil.set_magnetic_field(0)
+            print("Coils deactivated. Target cleared.")
 
     # --- Main loop ---
     def update_frame(self):
@@ -125,24 +154,32 @@ class CameraWidget(QMainWindow):
         self.pos = pos
 
         if pos is not None:
-            if self.target is not None:
+            if self.show_pos_cursor:
+                cv2.circle(display_frame, pos, radius=6, color=(255, 0, 0), thickness=2)
+
+            # --- Position display ---
+            self.position_label.setText(f"Position: {pos[0]:.1f}, {pos[1]:.1f}")
+
+            # --- Error calculation below position ---
+            if self.target is not None and self.running:
                 cv2.circle(display_frame, self.target, radius=6, color=(0, 0, 255), thickness=2)
                 error = ip.calculate_error(pos, self.target)
                 if error:
-                    print(f"Error (x,y,abs): {error}")
-
-                # --- PID controller & coil driving ---
-                if self.ctl_x and self.ctl_y:
-                    pid_x_out = self.ctl_x.compute(pos[0])
-                    pid_y_out = self.ctl_y.compute(pos[1])
-                    self.x_coil.set_magnetic_field(pid_x_out)
-                    self.y_coil.set_magnetic_field(pid_y_out)
-
-            if self.show_pos_cursor:
-                cv2.circle(display_frame, pos, radius=6, color=(255, 0, 0), thickness=2)
-            self.position_label.setText(f"Position: {pos[0]}, {pos[1]}")
+                    err_x, err_y, err_abs = error
+                    self.error_label.setText(f"Error: {err_x:.1f}, {err_y:.1f} (|{err_abs:.1f}|)")
+                    # PID controller
+                    if self.ctl_x and self.ctl_y:
+                        pid_x_out = self.ctl_x.compute(pos[0])
+                        pid_y_out = self.ctl_y.compute(pos[1])
+                        self.x_coil.set_magnetic_field(pid_x_out)
+                        self.y_coil.set_magnetic_field(pid_y_out)
+                else:
+                    self.error_label.setText("Error: -,-")
+            else:
+                self.error_label.setText("Error: -,-")
         else:
             self.position_label.setText("Position: None")
+            self.error_label.setText("Error: -,-")
 
         if getattr(self, 'show_mask', False):
             self.display_frame(comp_mask, is_mask=True)
@@ -215,9 +252,9 @@ class CameraWidget(QMainWindow):
                 self.target = (x_frame, y_frame)
                 print(f"New target set: {self.target}")
                 self.ctl_x = ctlr.PID("x", kp=1.00, ki=0.10, kd=0.00,
-                                      setpoint=self.target[0], output_limits=(-100, 100))
+                                      setpoint=self.target[0], output_limits=(-60, 60))
                 self.ctl_y = ctlr.PID("y", kp=1.00, ki=0.10, kd=0.00,
-                                      setpoint=self.target[1], output_limits=(-100, 100))
+                                      setpoint=self.target[1], output_limits=(-60, 60))
             else:
                 print("Click ignored: outside ROI")
 

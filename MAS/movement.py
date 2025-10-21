@@ -141,7 +141,7 @@ class Coil:
     def __init__(self, FWD, BWD): # When gradients aren't working
         # H-bridge pins: forward/backward for each axis
         self.FWD = FWD # Positive Direction
-        self.BWD = BWD# Nagative Direction
+        self.BWD = BWD # Negative Direction
     
         GPIO.setmode(GPIO.BCM)
         GPIO.setwarnings(False)

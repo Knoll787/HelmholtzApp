@@ -1,4 +1,3 @@
-"""
 import cv2
 from picamera2 import Picamera2
 from libcamera import Transform
@@ -141,10 +140,6 @@ class PiCamera(CameraBase):
 # --- Image Processing Functions ---
 
 def mask(frame, roi_points=None):
-    """
-    Generate a mask of the ROI with black color thresholding.
-    roi_points: list of 4 (x, y) tuples for polygon ROI.
-    """
     h, w = frame.shape[:2]
     mask = np.zeros((h, w), dtype=np.uint8)
 
@@ -173,10 +168,6 @@ def mask(frame, roi_points=None):
 
 
 def track(mask, min_area=500):
-    """
-    Track largest valid contour and return centroid.
-    Returns (x, y) or None if nothing is found.
-    """
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     valid = [c for c in contours if cv2.contourArea(c) >= min_area]
     if not valid:
@@ -193,10 +184,6 @@ def track(mask, min_area=500):
 
 
 def calculate_error(agent_pos, point):
-    """
-    Compute error between current agent position and target point.
-    Returns (x_error, y_error, abs_error).
-    """
     if agent_pos is None or point is None:
         return None
 
@@ -204,3 +191,4 @@ def calculate_error(agent_pos, point):
     y_error = agent_pos[1] - point[1]
     abs_error = (x_error**2 + y_error**2) ** 0.5
     return (x_error, y_error, abs_error)
+"""
