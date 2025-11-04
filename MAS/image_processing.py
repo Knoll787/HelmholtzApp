@@ -25,6 +25,7 @@ class PiCamera(CameraBase):
     def read(self):
         frame = self.picam2.capture_array()
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+        frame = cv2.rotate(frame, cv2.ROTATE_90_CLOCKWISE)   
         return True, frame
 
     def release(self):
@@ -47,7 +48,7 @@ def mask(frame, roi_points):
     # Masking - Thresholding
     lower_black = (0, 0, 0)
     upper_black = (180, 255, 95)
-    min_area = 500
+    min_area = 1 
     hole_fill = True
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv, np.array(lower_black), np.array(upper_black))

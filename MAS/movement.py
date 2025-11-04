@@ -27,8 +27,8 @@ class Gamepad:
         self.PINS = {
             "X_FWD": 17,
             "X_BWD": 27,
-            "Y_FWD": 13,
-            "Y_BWD": 5,
+            "Y_FWD": 5,
+            "Y_BWD": 13,
         }
 
         GPIO.setmode(GPIO.BCM)

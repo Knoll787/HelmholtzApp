@@ -251,9 +251,9 @@ class CameraWidget(QMainWindow):
             if self.roi_mask[y_frame, x_frame] > 0:
                 self.target = (x_frame, y_frame)
                 print(f"New target set: {self.target}")
-                self.ctl_x = ctlr.PID("x", kp=1.00, ki=0.10, kd=0.00,
+                self.ctl_x = ctlr.PID("x", kp=1, ki=0, kd=0,
                                       setpoint=self.target[0], output_limits=(-60, 60))
-                self.ctl_y = ctlr.PID("y", kp=1.00, ki=0.10, kd=0.00,
+                self.ctl_y = ctlr.PID("y", kp=1, ki=0, kd=0,
                                       setpoint=self.target[1], output_limits=(-60, 60))
             else:
                 print("Click ignored: outside ROI")
