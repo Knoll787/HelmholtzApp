@@ -41,7 +41,7 @@ class CameraWidget(QMainWindow):
         self.overlay_points = []       # list of (x_frame, y_frame) waypoints (virtual path)
         self.current_target_idx = 0
         self.path_follow_mode = False
-        self.advance_radius = 20       # pixels threshold to advance to next waypoint
+        self.advance_radius = 8       # pixels threshold to advance to next waypoint
         self._last_draw_point = None   # last point sampled while dragging
 
         # --- Video feed as main focus ---
@@ -119,7 +119,7 @@ class CameraWidget(QMainWindow):
         self.y_coil = mv.Coil(FWD=13, BWD=5)
         # create controllers, setpoint will be set per waypoint during following
         self.ctl_x = ctlr.PID("x", kp=1.0, ki=0.0, kd=0.0, setpoint=0, output_limits=(-60, 60))
-        self.ctl_y = ctlr.PID("y", kp=1.0, ki=0.0, kd=0.0, setpoint=0, output_limits=(-60, 60))
+        self.ctl_y = ctlr.PID("y", kp=5.0, ki=0.0, kd=0.0, setpoint=0, output_limits=(-60, 60))
 
         # Start/stop flag
         self.running = False
