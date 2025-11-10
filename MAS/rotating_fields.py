@@ -14,14 +14,7 @@ class MDD10A_DualCoilController:
     """
 
     def __init__(self):
-        # ---------------- PIN MAPPING (from your pinout)
-        # Motor Driver 3 - X coils
-        # DIR1 GPIO22, PWM1 GPIO17, DIR2 GPIO23, PWM2 GPIO27
-        # Motor Driver 2 - Y coils
-        # DIR1 GPIO6,  PWM1 GPIO5,  DIR2 GPIO19, PWM2 GPIO13
-        # Motor Driver 1 - Z coils
-        # DIR1 GPIO16, PWM1 GPIO12, DIR2 GPIO21, PWM2 GPIO20
-
+        # ---------------- PIN MAPPING ----------------
         self.PINS = {
             # X axis (driver 3)
             "X_DIR1": 22, "X_PWM1": 17,
@@ -43,7 +36,7 @@ class MDD10A_DualCoilController:
         for pin in self.PINS.values():
             GPIO.setup(pin, GPIO.OUT)
 
-        # Create PWM objects for every PWM pin (six PWMs)
+        # Create PWM objects
         self.pwm = {
             "X1": GPIO.PWM(self.PINS["X_PWM1"], self.PWM_FREQ),
             "X2": GPIO.PWM(self.PINS["X_PWM2"], self.PWM_FREQ),
@@ -55,30 +48,28 @@ class MDD10A_DualCoilController:
         for p in self.pwm.values():
             p.start(0)
 
-        # DIR pins grouped per axis (two DIR pins per axis)
         self.dir_pins = {
             "X": (self.PINS["X_DIR1"], self.PINS["X_DIR2"]),
             "Y": (self.PINS["Y_DIR1"], self.PINS["Y_DIR2"]),
             "Z": (self.PINS["Z_DIR1"], self.PINS["Z_DIR2"]),
         }
 
-        # PWM objects grouped per axis (two PWMs per axis)
         self.pwm_pairs = {
             "X": (self.pwm["X1"], self.pwm["X2"]),
             "Y": (self.pwm["Y1"], self.pwm["Y2"]),
             "Z": (self.pwm["Z1"], self.pwm["Z2"]),
         }
 
-        # Rotation / field parameters
-        self.MAX_PWM = 60.0       # safety duty-cycle cap (%) - both PWMs clipped to this
-        self.B_amplitude = 50.0   # amplitude used by generator (%)
-        self.rotation_freq = 1.0  # Hz default
-        self.rotation_mode = "XY" # "X","Y","Z","XY","XZ","YZ"
-        self.direction = 1        # +1 CCW, -1 CW
+        # Rotation parameters
+        self.MAX_PWM = 60.0
+        self.B_amplitude = 20.0
+        self.rotation_freq = 0.0
+        self.rotation_mode = "XY"
+        self.direction = 1  # +1 CCW, -1 CW
         self.rotating = False
         self.rotation_thread = None
 
-        # Initialize joystick (optional)
+        # Joystick setup
         sdl2.SDL_Init(sdl2.SDL_INIT_JOYSTICK)
         if sdl2.SDL_NumJoysticks() < 1:
             print("No controller detected! (SDL Joystick)")
@@ -87,58 +78,41 @@ class MDD10A_DualCoilController:
             self.joystick = sdl2.SDL_JoystickOpen(0)
             print("Connected:", sdl2.SDL_JoystickName(self.joystick).decode())
 
-        # Controller mapping (adjust indices to your controller)
+        # Button mapping
         self.BTN_ROTATE = 0  # toggle start/stop
-        self.BTN_MODE   = 1  # cycle modes (X,Y,Z,XY,XZ,YZ)
-        self.BTN_DIR    = 2  # reverse direction
+        self.BTN_MODE   = 1  # cycle modes
 
     # ---------------- Low-level axis control ----------------
     def _apply_axis(self, axis, duty_percent):
-        """
-        axis: "X"|"Y"|"Z"
-        duty_percent: -100 .. +100 (negative => reverse direction)
-        Sets BOTH DIR pins and BOTH PWM outputs for the axis identically.
-        """
         if axis not in ("X", "Y", "Z"):
             return
 
         dir1, dir2 = self.dir_pins[axis]
         pwm1, pwm2 = self.pwm_pairs[axis]
-
-        # Constrain magnitude
         mag = min(abs(duty_percent), self.MAX_PWM)
 
         if duty_percent > 0:
-            # Positive direction: set DIR pins HIGH and both PWMs to mag
             GPIO.output(dir1, GPIO.HIGH)
             GPIO.output(dir2, GPIO.HIGH)
             pwm1.ChangeDutyCycle(mag)
             pwm2.ChangeDutyCycle(mag)
         elif duty_percent < 0:
-            # Negative direction: set DIR pins LOW and both PWMs to mag
             GPIO.output(dir1, GPIO.LOW)
             GPIO.output(dir2, GPIO.LOW)
             pwm1.ChangeDutyCycle(mag)
             pwm2.ChangeDutyCycle(mag)
         else:
-            # Zero: stop PWMs and set DIRs low
             pwm1.ChangeDutyCycle(0)
             pwm2.ChangeDutyCycle(0)
             GPIO.output(dir1, GPIO.LOW)
             GPIO.output(dir2, GPIO.LOW)
 
     def set_field(self, bx, by, bz):
-        """
-        Set instantaneous magnetic 'amplitudes' on X, Y, Z axes.
-        Values are treated as PWM percent and may be negative (direction).
-        Example: bx = +30 -> both X coils driven at +30% duty.
-        """
-        # clip inputs to safe range of -MAX_PWM .. +MAX_PWM (optional)
         self._apply_axis("X", bx)
         self._apply_axis("Y", by)
         self._apply_axis("Z", bz)
 
-    # ---------------- Rotation / Oscillation Generator ----------------
+    # ---------------- Rotation Generator ----------------
     def rotate_field(self):
         t0 = time.time()
         while self.rotating:
@@ -148,31 +122,44 @@ class MDD10A_DualCoilController:
 
             bx = by = bz = 0.0
 
-            if self.rotation_mode == "XY":
-                bx =  B * math.sin(omega * t)
-                by =  B * math.cos(omega * t)
-            elif self.rotation_mode == "XZ":
-                bx =  B * math.sin(omega * t)
-                bz =  B * math.cos(omega * t)
-            elif self.rotation_mode == "YZ":
-                by =  B * math.sin(omega * t)
-                bz =  B * math.cos(omega * t)
-            elif self.rotation_mode == "X":
-                bx =  B * math.sin(omega * t)
-            elif self.rotation_mode == "Y":
-                by =  B * math.sin(omega * t)
-            elif self.rotation_mode == "Z":
-                bz =  B * math.sin(omega * t)
+            # --- TRUE rotation about axes ---
+            if self.rotation_mode == "X":  # Rotate around X (field in YZ)
+                bx = 0.0
+                by = B * math.sin(omega * t)
+                bz = B * math.cos(omega * t)
 
-            # Apply same commands to both coils per axis
+            elif self.rotation_mode == "Y":  # Rotate around Y (field in XZ)
+                bx = B * math.sin(omega * t)
+                by = 0.0
+                bz = B * math.cos(omega * t)
+
+            elif self.rotation_mode == "Z":  # Rotate around Z (field in XY)
+                bx = B * math.sin(omega * t)
+                by = B * math.cos(omega * t)
+                bz = 0.0
+
+            elif self.rotation_mode == "XY":  # Plane mode
+                bx = B * math.sin(omega * t)
+                by = B * math.cos(omega * t)
+                bz = 0.0
+
+            elif self.rotation_mode == "XZ":  # Plane mode
+                bx = B * math.sin(omega * t)
+                by = 0.0
+                bz = B * math.cos(omega * t)
+
+            elif self.rotation_mode == "YZ":  # Plane mode
+                bx = 0.0
+                by = B * math.sin(omega * t)
+                bz = B * math.cos(omega * t)
+
             self.set_field(bx, by, bz)
-
-            time.sleep(0.001)  # ~1000 Hz update
+            time.sleep(0.001)
 
     def start_rotation(self):
         if self.rotating:
             return
-        print(f"\nStarting: mode={self.rotation_mode}, dir={'CCW' if self.direction>0 else 'CW'}, "
+        print(f"\nStarting rotation: mode={self.rotation_mode}, dir={'CCW' if self.direction>0 else 'CW'}, "
               f"freq={self.rotation_freq:.2f} Hz")
         self.rotating = True
         self.rotation_thread = threading.Thread(target=self.rotate_field, daemon=True)
@@ -181,18 +168,17 @@ class MDD10A_DualCoilController:
     def stop_rotation(self):
         if not self.rotating:
             return
-        print("\nStopping...")
+        print("\nStopping rotation...")
         self.rotating = False
         if self.rotation_thread:
             self.rotation_thread.join(timeout=1.0)
             self.rotation_thread = None
-        # zero outputs
         self.set_field(0.0, 0.0, 0.0)
 
     # ---------------- Controller / SDL ----------------
     def poll_controller(self):
         if self.joystick is None:
-            return  # no joystick present
+            return
 
         event = sdl2.SDL_Event()
         while sdl2.SDL_PollEvent(event):
@@ -210,16 +196,14 @@ class MDD10A_DualCoilController:
                     self.rotation_mode = modes[(idx + 1) % len(modes)]
                     print(f"\nMode -> {self.rotation_mode}")
 
-                elif btn == self.BTN_DIR:
-                    self.direction *= -1
-                    print(f"\nDirection -> {'CCW' if self.direction>0 else 'CW'}")
-
             elif event.type == sdl2.SDL_JOYAXISMOTION:
-                # left stick Y axis adjust frequency
-                if event.jaxis.axis == 1:
-                    val = event.jaxis.value / 32767.0
+                if event.jaxis.axis == 1:  # Left stick Y-axis
+                    val = event.jaxis.value / 32767.0 / 30
+                    # Frequency proportional to magnitude, direction from sign
+                    self.direction = 1 if val >= 0 else -1
                     self.rotation_freq = max(0.05, min(10.0, abs(val) * 10.0))
-                    print(f"\rFreq: {self.rotation_freq:.2f} Hz", end="", flush=True)
+                    print(f"\rFreq: {self.rotation_freq:.2f} Hz, Dir: {'CCW' if self.direction>0 else 'CW'}",
+                          end="", flush=True)
 
             elif event.type == sdl2.SDL_QUIT:
                 self.stop_rotation()
@@ -229,7 +213,6 @@ class MDD10A_DualCoilController:
     # ---------------- Cleanup ----------------
     def cleanup(self):
         self.stop_rotation()
-        # stop all PWMs and set DIRs low
         for p in self.pwm.values():
             try:
                 p.ChangeDutyCycle(0)
@@ -256,11 +239,16 @@ class MDD10A_DualCoilController:
 if __name__ == "__main__":
     try:
         controller = MDD10A_DualCoilController()
-        print("\nControls:")
-        print(" A  -> toggle start/stop")
-        print(" B  -> cycle mode (X -> Y -> Z -> XY -> XZ -> YZ)")
-        print(" X  -> reverse direction (CW/CCW)")
-        print(" Left stick Y -> adjust frequency\n")
+        print("\nHelmholtz Coil Controller")
+        print("--------------------------")
+        print(" A  -> Toggle rotation start/stop")
+        print(" B  -> Cycle rotation axis (X, Y, Z, XY, XZ, YZ)")
+        print(" Left stick Y -> Adjust frequency and direction")
+        print("\nModes:")
+        print("  X  = Rotate around X axis (field in YZ plane)")
+        print("  Y  = Rotate around Y axis (field in XZ plane)")
+        print("  Z  = Rotate around Z axis (field in XY plane)")
+        print("  XY, XZ, YZ = direct plane modes for testing\n")
 
         while True:
             controller.poll_controller()
